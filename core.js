@@ -144,7 +144,7 @@ const boss=()=>!!(S.me&&S.me.unl.boss);
 const trustMult=cid=>isMe(cid)?(S.me.trust<35?.5:S.me.trust>75?1.1:1):1;
 const coachTa=cid=>{const co=coachOf(cid);return co?(co.ta+(cfxOf(co).ta||0))*trustMult(cid):45};
 const cboost=cid=>cl(Math.round((coachTa(cid)-55)/15),0,3);
-function eff(p,k,tac,cb=0){const tf=traitFx(p);let v=p[k]+(tf[k]||0)+(p.club?(cfx(p.club)[k]||0):0);if(tac){const w=TAC[tac][ATT.indexOf(k)];v+=w>=35?2:w>=25?1:0}return v+cb}
+function eff(p,k,tac,cb=0){const tf=traitFx(p);let v=p[k]+(tf[k]||0)+(p.club?(cfx(p.club)[k]||0):0)+(S.me&&p.club===S.me.cid&&S.me.chem!=null?(S.me.chem-50)/25:0);if(tac){const w=TAC[tac][ATT.indexOf(k)];v+=w>=35?2:w>=25?1:0}return v+cb}
 function fit(p,tac,cb=0){tac=tac||'Total Football';const e=ATT.map(k=>eff(p,k,tac,cb));const o=PW[p.pos].reduce((s,w,i)=>s+w*e[i],0);if(p.pos==='GK')return Math.round(o);return Math.round(.55*o+.45*TAC[tac].reduce((s,w,i)=>s+w/100*e[i],0))}
 const fitC=(p,cid=S.me.cid)=>{const co=coachOf(cid);return fit(p,co?co.tac:null,cboost(cid))};
 const pen=(pp,sp)=>{if(pp===sp)return 0;if(pp==='GK'||sp==='GK')return 40;const d=Math.abs(PI[pp]-PI[sp]);return d===1?6:d===2?12:16};
@@ -304,18 +304,18 @@ function scoutTarget(){const co=coachOf(S.me.cid);const myAvg=avgOvr(S.me.cid);c
   if(R()<.5){const c=Object.values(S.P).filter(p=>p.club&&p.club!==S.me.cid&&!p.yth&&Math.abs(lq(S.clubs[p.club])-mq)<=8&&fitC(p)>=myAvg+1);if(c.length)return pick(c)}
   return genPlayer(pick(POSL.slice(1)),myAvg+ri(-2,6)+S.me.fac.sc,ri(17,30),0,S.me.fac.sc)}
 function scoutReport(){const n=ri(1,4);const ps=[];for(let i=0;i<n;i++){const p=scoutTarget();if(p&&!ps.includes(p.id))ps.push(p.id)}const rid=newReport('Players who fit our style',ps,'Chief Scout');mail('scoutrep',{rid,n:ps.length})}
-function agency(pos,minOvr,maxAge,emph,n,src='Agency brief'){const out=[];const lvl=S.me.fac.sc;for(let i=0;i<n;i++){const age=ri(17,Math.max(17,maxAge));let tgt=minOvr+ri(0,4)+Math.floor(lvl/2);if(!boss()&&!S.me.unl.eyes&&R()<.3)tgt-=ri(2,6);const p=genPlayer(pos||pick(POSL.slice(1)),tgt,age,0,lvl+(S.me.unl.eyes?3:0),emph);out.push(p.id)}return newReport(`${src}: ${pos||'any'} · ${emph?ALF[emph]:'any profile'} · ${minOvr}+ OVR`,out,src)}
+function agency(pos,minOvr,maxAge,emph,n,src='Agency brief'){const out=[];const lvl=S.me.fac.sc;for(let i=0;i<n;i++){const age=ri(17,Math.max(17,maxAge));let tgt=minOvr+ri(0,4)+Math.floor(lvl/2);if(!boss()&&!S.me.unl.eyes&&R()<.3*(1-((S.me.sd?S.me.sd.acc:50)-50)/70))tgt-=ri(2,6);const p=genPlayer(pos||pick(POSL.slice(1)),tgt,age,0,lvl+(S.me.unl.eyes?3:0),emph);out.push(p.id)}return newReport(`${src}: ${pos||'any'} · ${emph?ALF[emph]:'any profile'} · ${minOvr}+ OVR`,out,src)}
 const faFee=p=>Math.round(p.val*.3/1000)*1000;
 
 /* ---------- transfers ---------- */
-function bidFor(p){const c=me();const buyers=Object.values(S.clubs).filter(x=>x.id!==c.id&&lq(x)>=lq(c)-8&&lq(x)<=lq(c)+14&&(x.money||0)>p.val*1.2);if(!buyers.length)return;const b=pick(buyers);const fee=Math.round(p.val*(.8+R()*.75)/1000)*1000;S.tr.inc.unshift({id:++S.nid,pid:p.id,club:b.id,fee,d:S.d,exp:S.d+7,st:'open'});mail('bidinfo',{pid:p.id,club:b.id,fee})}
+function bidFor(p){const c=me();const buyers=Object.values(S.clubs).filter(x=>x.id!==c.id&&lq(x)>=lq(c)-8&&lq(x)<=lq(c)+14&&(x.money||0)>p.val*1.2);if(!buyers.length)return;const b=pick(buyers);const fee=Math.round(p.val*(.8+R()*.75)*(1+((S.me.sd?S.me.sd.neg:50)-50)/300)/1000)*1000;S.tr.inc.unshift({id:++S.nid,pid:p.id,club:b.id,fee,d:S.d,exp:S.d+7,st:'open'});mail('bidinfo',{pid:p.id,club:b.id,fee})}
 function trHist(txt,fee,dir){S.tr.hist.unshift({d:S.d,s:S.season,txt,fee,dir});if(S.tr.hist.length>120)S.tr.hist.length=120;S.me.log.push({s:S.season,d:S.d,txt})}
 function sellTo(p,club,fee){planReactSell(p);S.clubs[club].money=(S.clubs[club].money||0)-fee;moveRec(p,S.me.cid,club,fee,'transfer');news('transfer',`${p.name} (${p.pos}, ${p.ovr}) ${me().name} → ${S.clubs[club].name} · ${money(fee)}`,[S.me.cid,club]);p.club=club;SQ=null;p.num=freeNum(club);S.me.money+=fee;S.me.fin.tr+=fee;S.me.force=S.me.force.filter(x=>x!==p.id);trHist(`Sold ${p.name} to ${S.clubs[club].name}`,fee,'out')}
 function completeSign(p,fee){const from=p.club;if(from){S.clubs[from].money=(S.clubs[from].money||0)+fee}moveRec(p,from,S.me.cid,fee,from?'transfer':'free');news('transfer',`${p.name} (${p.pos}, ${p.ovr}) ${from?`${S.clubs[from].name} → ${me().name}`:`signs for ${me().name} as a free agent`}${fee?` · ${money(fee)}`:''}`,[from,S.me.cid].filter(Boolean));S.me.money-=fee;S.me.fin.tr-=fee;p.club=S.me.cid;p.yth=false;SQ=null;p.num=freeNum(S.me.cid);p.mo=cl(p.mo+10,0,100);p.last=S.d;S.me.short=S.me.short.filter(x=>x!==p.id);if(from)refill(from);planReactSign(p);trHist(`Signed ${p.name}${from?` from ${S.clubs[from].name}`:' (free agent)'}`,fee,'in')}
 function signFree(p){const fee=faFee(p);if(p.club)return'He has a club. Make an offer instead.';if(S.me.money<fee)return `Not enough money: you need ${money(fee)}. Top up in the Store.`;if(!boss()&&R()>interest(p))return `${p.name} isn't interested in joining ${me().name}.`;completeSign(p,fee);return `${p.name} signs! Fee ${money(fee)}.`}
 function makeOffer(p,fee){if(p.club===S.me.cid)return'Already ours.';if(!p.club)return signFree(p);if(S.tr.out.some(o=>o.pid===p.id&&(o.st==='pending'||o.st==='countered')))return'You already have an offer on the table for him.';S.tr.out.unshift({id:++S.nid,pid:p.id,from:p.club,fee,d:S.d,due:S.d+ri(1,3),st:'pending'});return `Offer of ${money(fee)} sent to ${S.clubs[p.club].name}. Expect an answer within 3 days.`}
 function resolveOut(o){const p=S.P[o.pid];if(!p||p.club!==o.from){o.st='failed';o.msg='He moved elsewhere.';return}const club=S.clubs[o.from];
-  let ok=boss();if(!ok){if(R()<(club.big?.35:.18)){o.st='rejected';o.msg=`${club.name} refuse to sell.`}else if(o.fee>=p.val*(club.big?1.15:.95)&&R()<.85)ok=true;else if(o.fee>=p.val*.7){o.st='countered';o.cfee=Math.round(p.val*(club.big?1.3:1.08)/1000)*1000;o.msg=`${club.name} want ${money(o.cfee)}.`}else{o.st='rejected';o.msg=`${club.name} laughed it off.`}}
+  const nf=1-((S.me.sd?S.me.sd.neg:50)-50)/250;let ok=boss();if(!ok){if(R()<(club.big?.35:.18)*nf){o.st='rejected';o.msg=`${club.name} refuse to sell.`}else if(o.fee>=p.val*(club.big?1.15:.95)*nf&&R()<.85)ok=true;else if(o.fee>=p.val*.7*nf){o.st='countered';o.cfee=Math.round(p.val*(club.big?1.3:1.08)*nf/1000)*1000;o.msg=`${club.name} want ${money(o.cfee)}.`}else{o.st='rejected';o.msg=`${club.name} laughed it off.`}}
   if(ok)finalizeOut(o,o.fee);mail('trnote',{title:`${p.name}: ${o.st==='done'?'deal done':o.st==='countered'?'counter-offer':o.st==='terms'?'he said no':'offer rejected'}`,html:`<p>${esc(o.msg)}</p>`})}
 function finalizeOut(o,fee){const p=S.P[o.pid];if(!boss()&&R()>interest(p)){o.st='terms';o.msg=p.club&&lq(S.clubs[p.club])>lq(me())?`${p.name} won't drop down to the ${lgName(me())} to join a club your size.`:`${p.name} isn't interested in joining ${me().name}.`;return}if(S.me.money<fee){o.st='failed';o.msg=`Clubs agreed ${money(fee)} but we only have ${money(S.me.money)}. Top up and try again.`;return}const from=S.clubs[p.club].name;completeSign(p,fee);o.st='done';o.paid=fee;o.msg=`${p.name} joins from ${from} for ${money(fee)}.`}
 function refill(cid){const c=S.clubs[cid];const s=sq(cid);for(const pos of POSL){const have=s.filter(p=>p.pos===pos).length;for(let k=have;k<NEED[pos];k++){const p=genPlayer(pos,lq(c)+ri(-4,4),ri(18,30),cid);SQ=null;p.num=freeNum(cid)}}}
@@ -336,8 +336,8 @@ function randomMail(){
 function advanceDay(){
   S.d++;const o=dobj(S.d);
   if(o.m===6&&o.day===1)endSeason();
-  if(o.day===1){monthly(o);aiMonthly();coachMonthly()}
-  huntDay();
+  if(o.day===1){monthly(o);aiMonthly();coachMonthly();if(typeof dynMonthly==='function')dynMonthly()}
+  huntDay();if(typeof sdDay==='function'){sdDay();rumours()}
   if(o.m===3&&o.day===1){youthIntake();aiYouth()}
   aiTransferDay();cupAdvance();
   if(o.wd===1)develop();

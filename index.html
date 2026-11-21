@@ -196,6 +196,22 @@ label.f{display:block;margin-bottom:10px}label.f span{display:block;font-size:13
 .pop-in{animation:popin .35s cubic-bezier(.2,1.3,.4,1)}@keyframes popin{from{transform:translateY(8px) scale(.98);opacity:0}}
 [data-tip]{cursor:help;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 @media(prefers-reduced-motion:reduce){.rip,.dotp,.pop-in{animation:none}[data-a]:active{transform:none}}
+
+.sdic{flex:none;width:58px;height:58px;border-radius:16px;background:var(--grnbg);color:var(--grn);display:grid;place-items:center;font-size:28px;border:1px solid color-mix(in srgb,var(--grn) 30%,transparent)}
+.chipsrow{display:flex;gap:8px;margin:4px 0 12px;overflow-x:auto}
+.tweet{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin-bottom:12px;animation:popin .3s ease}
+.av{flex:none;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:#e3ebf7;color:#2b5aa8}.av.y{background:#f6ead7;color:#8a5a12}.av.g{background:var(--grnbg);color:var(--grn)}
+.bigstat{display:flex;flex-direction:column;gap:6px;margin:0}.bigstat small{font-size:22px}
+.spr{padding:7px 0;cursor:pointer}.spr .disp{font-size:26px}
+.mbar{display:flex;height:14px;border-radius:14px;overflow:hidden;margin:12px 0;gap:2px}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}
+.mw{padding:10px 0;border-top:1px solid var(--line);cursor:pointer}
+.hrow{display:flex;align-items:center;gap:14px;width:100%;background:none;border:0;border-top:1px solid var(--line);padding:14px 0;color:inherit}.hrow:first-of-type{border-top:0}.hbar{flex:none;width:10px;border-radius:10px;align-self:center}
+.ell{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs{overflow-x:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tabs button{flex:1 0 auto;white-space:nowrap;padding-left:12px;padding-right:12px}
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}@media(min-width:700px){.tiles{grid-template-columns:repeat(4,1fr)}}
+.tile{display:flex;flex-direction:column;gap:14px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;color:inherit;min-height:96px}.tile b{font-size:17px}
+.tic{width:40px;height:40px;border-radius:12px;background:var(--grnbg);display:grid;place-items:center;font-size:20px}.tst{font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);text-align:right}.tst.g{color:var(--grn)}.tst.r{color:var(--red2)}
+.cupc{background:#faf5ea;border-color:#e6d3a8}
 </style>
 
 </head>
@@ -219,5 +235,6 @@ label.f{display:block;margin-bottom:10px}label.f span{display:block;font-size:13
 <script src="enc.js"></script>
 <script src="actions.js"></script>
 <script src="coachui.js"></script>
+<script src="dyn.js"></script>
 </body>
 </html>
