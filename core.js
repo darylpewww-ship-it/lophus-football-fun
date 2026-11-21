@@ -434,7 +434,10 @@ const SEEDP=[.0025,.005,.01,.02,.035,.06,.1,.15,.25];
 const fuseChance=(t,seeds,copy)=>Math.min(.95,(1-Math.pow(1-SEEDP[t],seeds))*(copy?.5:1));
 
 /* ---------- save ---------- */
-function save(){try{const j=JSON.stringify(S);localStorage.setItem(SKEY,window.LZString?'z'+LZString.compressToUTF16(j):'j'+j)}catch(e){console.warn('save failed',e)}}
+let SW=null,SWid=0,SVT=null,SVdirty=false,SWpend=false;try{if(typeof Worker!=='undefined'&&location.protocol!=='file:'){SW=new Worker('saveworker.js');SW.onmessage=e=>{if(e.data.id!==SWid)return;SWpend=false;try{localStorage.setItem(SKEY,'z'+e.data.z)}catch(_){}};SW.onerror=()=>{SW=null}}}catch(_){SW=null}
+function saveNow(sync){clearTimeout(SVT);SVT=null;if(!S||!S.me)return;SVdirty=false;try{const j=JSON.stringify(S);if(SW&&!sync){SWpend=true;SW.postMessage({id:++SWid,j})}else{SWid++;SWpend=false;localStorage.setItem(SKEY,window.LZString?'z'+LZString.compressToUTF16(j):'j'+j)}}catch(e){console.warn('save failed',e)}}
+function save(){SVdirty=true;clearTimeout(SVT);SVT=setTimeout(()=>saveNow(false),900)}
+if(typeof addEventListener!=='undefined'){addEventListener('pagehide',()=>{if(SVdirty||SVT||SWpend)saveNow(true)});addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&(SVdirty||SVT||SWpend))saveNow(true)})}
 function load(){try{const s=localStorage.getItem(SKEY);if(s){S=JSON.parse(s[0]==='z'?LZString.decompressFromUTF16(s.slice(1)):s.slice(1));SQ=null;ensureAI();ensureCoaches();if(!S.news)S.news=[];if(!S.cups)cupsSetup();return true}}catch(e){}return false}
 const exportSave=()=>{const j=JSON.stringify(S);return window.LZString?'LFF3:'+LZString.compressToBase64(j):j};
 const importSave=t=>{t=t.trim();return JSON.parse(t.startsWith('LFF3:')?LZString.decompressFromBase64(t.slice(5)):t)};
