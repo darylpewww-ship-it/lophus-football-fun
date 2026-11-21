@@ -112,7 +112,7 @@ function genPlayer(pos,target,age,club=0,potBoost=0,emph=null){
 function genGem(club,t,youthLvl){const pos=pick(['DF','MF','AM','ST','ST','AM','GK']);const age=ri(16,18);const lowTarget=cl(Math.round(32+youthLvl*1.2+(5-t)*2+ri(-4,5)),30,60);const p=genPlayer(pos,lowTarget,age,club);const want=ri(90,97);
   for(let k=0;k<40&&p.pot<want;k++){const a=pick(ATT);if(p.cap[a]<99)p.cap[a]++;p.pot=calcOvr(p,p.cap)}
   p.gem=true;rollTraits(p,.35);setVal(p);return p}
-function genCoach(q,club=0){const cn=club&&S.clubs[club]?S.clubs[club].nat:null;const n=cn&&R()<.7&&FN[cn]?cn:nat();const c={id:++S.nid,name:pname(n),nat:n,age:ri(36,64),tac:pick(Object.keys(TAC)),form:pick(Object.keys(FORMS)),ta:cl(Math.round(q+nrm()*9),25,97),dv:cl(Math.round(q+nrm()*9),25,97),mm:cl(Math.round(q+nrm()*9),25,97),club,aw:[]};c.wage=Math.round((Math.max(0,c.ta+c.dv+c.mm-120)*230+2500)/100)*100;S.C[c.id]=c;return c}
+function genCoach(q,club=0){const cn=club&&S.clubs[club]?S.clubs[club].nat:null;const n=cn&&R()<.7&&FN[cn]?cn:nat();const c={id:++S.nid,name:pname(n),nat:n,age:ri(36,64),tac:pick(Object.keys(TAC)),form:pick(Object.keys(FORMS)),ta:cl(Math.round(q+nrm()*9),25,97),dv:cl(Math.round(q+nrm()*9),25,97),mm:cl(Math.round(q+nrm()*9),25,97),club,aw:[]};c.ai=cl(Math.round(c.ta*.6+q*.25+nrm()*12+5),8,99);c.wage=Math.round((Math.max(0,c.ta+c.dv+c.mm-120)*230+2500)/100)*100;S.C[c.id]=c;return c}
 function shortName(n){const w=n.split(' ').filter(x=>!['FC'].includes(x));let s=w.map(x=>x[0]).join('').toUpperCase();if(s.length<2)s=n.slice(0,3).toUpperCase();return s.slice(0,3)}
 function clubName(used){for(let k=0;k<300;k++){const town=pick(PRE)+pick(SUF);const t=pick(TYPES);const n=(t==='Sporting'||t==='Dynamo')?`${t} ${town}`:`${town} ${t}`;if(!used.has(town)){used.add(town);return{n,town}}}return{n:'Club '+ri(100,999),town:'Club'}}
 function freeNum(cid){const used=new Set(sqAll(cid).map(p=>p.num));for(let i=1;i<99;i++)if(!used.has(i))return i;return 99}
@@ -135,6 +135,10 @@ const sq=cid=>sqAll(cid).filter(p=>!p.yth);
 const youth=cid=>sqAll(cid).filter(p=>p.yth);
 const me=()=>S.clubs[S.me.cid];
 const isMe=cid=>S.me&&cid===S.me.cid;
+const AILV=[[30,'Rookie','r'],[45,'Amateur','y'],[60,'Semi-pro','y'],[72,'Professional','bl'],[84,'Elite','g'],[93,'World class','g'],[101,'Mastermind','g']];
+const coachAI=c=>{if(!c)return 35;if(c.ai==null)c.ai=cl(Math.round(c.ta*.85+((c.id*37)%21)-10),8,99);return c.ai};
+const aiLvl=c=>{const v=coachAI(c);return AILV.find(l=>v<l[0])};
+const aiChip=c=>{const[,n,k]=aiLvl(c);return `<span class="chip ${k}" title="Match AI">🧠 ${n} ${coachAI(c)}</span>`};
 const coachOf=cid=>S.clubs[cid]&&S.C[S.clubs[cid].coach];
 const boss=()=>!!(S.me&&S.me.unl.boss);
 const trustMult=cid=>isMe(cid)?(S.me.trust<35?.5:S.me.trust>75?1.1:1):1;

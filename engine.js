@@ -31,17 +31,17 @@ function attrs(p,tac,cb){const e=k=>eff(p,k,tac,cb);const x=px(p);const T=e('tec
 
 function runEngine(f,detail){
   const ref={name:pick(REFS),strict:Math.round((.72+R()*.6)*100)/100};
-  const M={added1:()=>Math.min(300,60+M.stops1*12),added2:()=>Math.min(420,90+(M.stops-M.stops1)*12),stops1:0,t:0,half:1,tl:[],detail,ref,mom:0,lastLine:-999,story:[],ev:[],cards:[],act:[],mp:[],subs:[],rt:{},minute:0,addedSeen:0,stops:0,poss:{h:0,a:0},heat:[],lastGoal:null};
+  const M={planLines:[],added1:()=>Math.min(300,60+M.stops1*12),added2:()=>Math.min(420,90+(M.stops-M.stops1)*12),stops1:0,t:0,half:1,tl:[],detail,ref,mom:0,lastLine:-999,story:[],ev:[],cards:[],act:[],mp:[],subs:[],rt:{},minute:0,addedSeen:0,stops:0,poss:{h:0,a:0},heat:[],lastGoal:null};
   const H=mkSide(M,f.h,'h'),A=mkSide(M,f.a,'a');H.opp=A;A.opp=H;M.H=H;M.A=A;
   [H,A].forEach(sd=>sd.on.forEach(u=>{for(const id of u.p.tr){const s=SK[id];if(s&&s.act&&R()<s.act.ch)M.act.push({side:sd.k,pid:u.p.id,sid:id,k:s.act.k,m:ri(5,85),done:false})}}));
-  M.home=H;H.homeAdv=homeAdv(f.h);
-  if(detail)preMatchLines(M,H,A);
+  M.home=H;H.homeAdv=homeAdv(f.h);gamePlan(M,H,A);gamePlan(M,A,H);
+  if(detail){preMatchLines(M,H,A);M.planLines.forEach(t=>line(M,t,'n'))}
   let cur={sd:H,z:.5,x:.5,phase:'kick'};
   const half1=45*60,half2=90*60;
   while(true){
     tickMinute(M);
     const r=possession(M,cur.sd,cur.z,cur.x,cur.phase);cur=r;
-    if(M.half===1&&M.t>=half1+M.added1()){M.stops1=M.stops;M.half=2;const lab=`45+${Math.max(1,Math.round((M.t-half1)/60))}`;M.t=half1;if(detail){htLines(M);log(M,'ht',{});}cur={sd:A,z:.5,x:.5,phase:'kick'};[H,A].forEach(sd=>sd.on.forEach(u=>u.fat=Math.max(0,u.fat-.08)))}
+    if(M.half===1&&M.t>=half1+M.added1()){M.stops1=M.stops;M.half=2;const lab=`45+${Math.max(1,Math.round((M.t-half1)/60))}`;M.t=half1;if(detail){htLines(M);log(M,'ht',{});}htAdjust(M,H);htAdjust(M,A);cur={sd:A,z:.5,x:.5,phase:'kick'};[H,A].forEach(sd=>sd.on.forEach(u=>u.fat=Math.max(0,u.fat-.08)))}
     else if(M.half===2&&M.t>=half2+M.added2()){break}
     if(M.t>9000)break;
   }
@@ -49,9 +49,9 @@ function runEngine(f,detail){
   return buildResult(M,f);
 }
 function mkSide(M,cid,k){const L=pickXI(cid);const co=coachOf(cid);const tac=L.tac;const cb=cboost(cid);
-  const sd={_M:M,k,cid,L,co,tac,base:{...(STY[tac]||STY['Total Football'])},sty:null,ment:'normal',g:0,on:[],bench:L.bench.slice(),subs:0,fouls:0,st:{shots:0,sot:0,corners:0,fouls:0,yc:0,rc:0,off:0,xg:0},boost:0,xgMul:1,oppXg:1,lastConceded:-999,reds:0,str:strength(cid,L)};
+  const sd={ai:coachAI(co),_M:M,k,cid,L,co,tac,base:{...(STY[tac]||STY['Total Football'])},sty:null,ment:'normal',g:0,on:[],bench:L.bench.slice(),subs:0,fouls:0,st:{shots:0,sot:0,corners:0,fouls:0,yc:0,rc:0,off:0,xg:0},boost:0,xgMul:1,oppXg:1,lastConceded:-999,reds:0,str:strength(cid,L)};
   L.xi.forEach((p,i)=>{if(!p)return;sd.on.push({p,a:attrs(p,tac,cb),role:L.slots[i][0],lane:L.slots[i][1],fat:0,f:0,y:false,off:false});M.rt[p.id]=0});
-  sd.sty=sd.base;return sd}
+  sd.boost=(sd.ai-55)*.03;sd.sty=sd.base;return sd}
 const live=sd=>sd.on.filter(u=>!u.off);
 const fq=(u,v)=>v*(1-.18*u.fat);
 const avgA=(us,f)=>us.length?us.reduce((s,u)=>s+fq(u,f(u.a)),0)/us.length:40;
@@ -75,13 +75,16 @@ function tickMinute(M){const m=Math.floor(M.t/60);if(m===M.minute)return;const s
     if(live(sd).length<live(sd.opp).length)ment='regroup';
     if(M.half===2){if(diff>0&&tm>=70)ment=diff>=2?'cruise':'protect';else if(diff<0&&tm>=62)ment=tm>=80?'desperate':'chase';else if(diff===0&&tm>=78&&sd.str>sd.opp.str+2)ment='chase'}
     if(diff<0&&M.t-sd.lastConceded<300&&ment==='normal')ment='respond';
-    if(ment!==sd.ment){const prev=sd.ment;sd.ment=ment;const b=sd.base,o=MENT[ment];sd.sty={tempo:cl(b.tempo+(o.tempo||0),.05,1),press:cl(b.press+(o.press||0),.05,1),line:cl(b.line+(o.line||0),.05,1),width:b.width,direct:cl(b.direct+(o.direct||0),0,1),risk:cl(b.risk+(o.risk||0),.05,1),waste:o.waste||0,foul:o.foul||1};
+    if(sd.ai<45&&ment==='protect'&&(sd._mgl??(sd._mgl=R()<.5)))ment='normal';
+    if(sd.ai<35&&M.half===2&&diff>0&&tm>=55&&ment==='normal'&&(sd._early??(sd._early=R()<.6)))ment='protect';
+    if(sd.ai<40&&ment==='chase'&&(sd._slow??(sd._slow=R()<.5))&&tm<78)ment='normal';
+    if(ment!==sd.ment){const prev=sd.ment;sd.ment=ment;const b=sd.base,o0=MENT[ment];const o={...o0};if(sd.ai>=80&&ment==='protect'){o.line=(o.line||0)*.5;o.risk=(o.risk||0)*.6}sd.sty={tempo:cl(b.tempo+(o.tempo||0),.05,1),press:cl(b.press+(o.press||0),.05,1),line:cl(b.line+(o.line||0),.05,1),width:b.width,direct:cl(b.direct+(o.direct||0),0,1),risk:cl(b.risk+(o.risk||0),.05,1),waste:o.waste||0,foul:o.foul||1};
       if(M.detail&&ment!=='normal'&&ment!=='respond')narr(M,sd,ment)}
     if(!sd.sty.foul)sd.sty.foul=1;
     // substitutions
-    if(M.half===2&&M.t/60>=57&&sd.subs<TUNE.maxSubs&&sd.bench.length&&R()<.11*steps){const tired=live(sd).filter(u=>u.role!=='GK').sort((a,b)=>b.fat-a.fat);let off=tired[0];let want=off&&off.role;
-      if(sd.ment==='chase'||sd.ment==='desperate'){const d=live(sd).filter(u=>u.role==='DF'||u.role==='MF').sort((a,b)=>b.fat-a.fat)[0];if(d&&R()<.5){off=d;want='ST'}}
-      if(off&&(off.fat>.32||sd.ment==='chase'||sd.ment==='desperate'||M.t/60>70)){const pool=sd.bench.filter(p=>p.pos!=='GK');const on=pool.find(p=>p.pos===want)||pool.find(p=>pen(p.pos,off.role)<=6)||pool[0];
+    if(M.half===2&&M.t/60>=75-sd.ai*.25&&sd.subs<TUNE.maxSubs&&sd.bench.length&&R()<(.05+sd.ai/900)*steps){const tired=live(sd).filter(u=>u.role!=='GK').sort((a,b)=>b.fat-a.fat);let off=sd.ai<40&&R()<.5?pick(tired):tired[0];let want=off&&off.role;
+      if(sd.ment==='chase'||sd.ment==='desperate'){const d=live(sd).filter(u=>u.role==='DF'||u.role==='MF').sort((a,b)=>b.fat-a.fat)[0];if(d&&R()<(sd.ai/120)){off=d;want='ST'}}
+      if(off&&(off.fat>.32||sd.ment==='chase'||sd.ment==='desperate'||M.t/60>70)){const pool=sd.bench.filter(p=>p.pos!=='GK');const on=sd.ai<35&&R()<.4?pick(pool):(pool.filter(p=>p.pos===want).sort((a,b)=>b.ovr-a.ovr)[0]||pool.find(p=>pen(p.pos,off.role)<=6)||pool[0]);
         if(on){sd.bench=sd.bench.filter(p=>p!==on);const u={p:on,a:attrs(on,sd.tac,cboost(sd.cid)),role:off.role===want?off.role:want||off.role,lane:off.lane,fat:0,f:0,y:false,off:false};off.off=true;off.subbed=true;sd.on.push(u);sd.subs++;M.rt[on.id]=0;M.subs.push({side:sd.k,off:off.p.id,on:on.id,m:Math.floor(M.t/60)+1});M.t+=25;sd._r=null;
           log(M,'sub',{s:sd.k,off:off.p.id,on:on.id});if(M.detail)line(M,pick([`Change for ${clubN(sd)}: ${on.name} replaces ${off.p.name}${off.fat>.45?', who is out on his feet':''}.`,`${clubN(sd)} make a change: ${last(off.p.name)} off, ${on.name} on${sd.ment==='chase'||sd.ment==='desperate'?' to chase the game':''}.`,`Fresh legs for ${clubN(sd)}: ${on.name} comes on for ${last(off.p.name)}.`]),'s')}}}
   });
@@ -239,7 +242,7 @@ function taker(sd){return live(sd).filter(u=>u.role!=='GK').sort((a,b)=>fq(b,b.a
 function corner(M,sd){const op=sd.opp;sd.st.corners++;bumpMom(M,sd,.03);M.t+=22;M.stops++;
   const tk=taker(sd);const R1=teamR(sd),R2=teamR(op);const adv=R1.aerA-R2.aerD;const ta=(sd.co?sd.co.ta:55);
   const rw={near:2+Math.max(0,adv)*.05,far:2+R1.aerA/40,driven:1+fq(tk,tk.a.setp)/60,short:1+(1-sd.sty.tempo)*1.5+(adv<-5?1.2:0),edge:.9+(avgA(live(sd).filter(u=>u.role==='MF'||u.role==='AM'),a=>a.tec)-60)*.04,routine:.25+ta/120};
-  const rt=wpick(Object.keys(rw),k=>Math.max(.1,rw[k]));const side=R()<.5?0:1;
+  const sharp=.4+sd.ai/50;const rt=wpick(Object.keys(rw),k=>Math.pow(Math.max(.1,rw[k]),sharp));const side=R()<.5?0:1;
   const RN={near:'an in-swinger to the near post',far:'a deep floated ball to the far post',driven:'a driven ball across the six-yard box',short:'it short',edge:'it to the edge of the box',routine:'a training-ground routine'};
   log(M,'corner',{s:sd.k,pid:tk.p.id,side,rt});
   if(M.detail)line(M,pick([`Corner to ${clubN(sd)}. ${last(tk.p.name)} goes for ${RN[rt]}.`,`${last(tk.p.name)} over the corner... ${RN[rt]}.`]),'');
@@ -308,3 +311,18 @@ function buildResult(M,f){const H=M.H,A=M.A;const pt=M.poss.h+M.poss.a||1;
   const apps=sd=>sd.on.map(u=>u.p);
   return{Lh:H.L,La:A.L,gh:H.g,ga:A.g,ev:M.ev,cards:M.cards,act:M.act.filter(a=>a.fired).map(a=>({side:a.side,pid:a.pid,sid:a.sid,k:a.k,m:a.m})),mp:M.mp,poss:Math.round(M.poss.h/pt*100),shH:H.st.shots,shA:A.st.shots,sh:H.str,sa:A.str,
     st:{h:H.st,a:A.st},subs:M.subs,apps:{h:apps(H),a:apps(A)},rtd:M.rt,ref:M.ref,tl:M.detail?M.tl:null}}
+
+/* ---- coach match AI ---- */
+const COUNTER={'High Pressing':{direct:.2,tempo:.1,why:'go long early to beat their press'},'Low Block':{width:.15,tempo:-.1,risk:.05,why:'stretch their low block with width'},'Possession':{press:.12,line:.05,why:'press their build-up and force errors'},'Direct Play':{line:-.1,press:-.05,why:'drop the line and win the second balls'},'Fast Transition':{risk:-.1,line:-.08,why:'stay compact and deny them counters'},'Total Football':{press:.08,tempo:.05,why:'match their energy all over the pitch'}};
+function gamePlan(M,sd,op){const ai=sd.ai;
+  if(R()<(ai-35)/70){const c=COUNTER[op.tac];if(c){const b={...sd.base};for(const k in c)if(k!=='why')b[k]=cl((b[k]||0)+c[k],.05,1);sd.base=b;sd.sty=b;M.planLines.push(`${sd.co?sd.co.name:'The coach'} (${aiLvl(sd.co)[1]}) has set ${clubN(sd)} up to ${c.why}.`)}}
+  if(ai>=68&&R()<ai/130){const tgt=live(op).filter(u=>u.role==='ST'||u.role==='AM').sort((a,b)=>(b.a.fin+b.a.vis)-(a.a.fin+a.a.vis))[0];if(tgt){const d=4+Math.round((ai-68)/8);tgt.a={...tgt.a,fin:tgt.a.fin-d,vis:tgt.a.vis-d,drb:tgt.a.drb-d};sd.marked=tgt;M.planLines.push(`${clubN(sd)} have a man-marking job on ${tgt.p.name}.`)}}
+  if(ai<30&&R()<.35){const b={...sd.base};b.line=cl(b.line+.15,.05,1);b.risk=cl(b.risk+.15,.05,1);sd.base=b;sd.sty=b;M.planLines.push(`${clubN(sd)} look naive tonight: a high line and nobody covering it.`)}}
+function htAdjust(M,sd){const op=sd.opp;const diff=sd.g-op.g;const worse=op.st.xg>sd.st.xg+.4;if(diff>0&&!worse)return;
+  const ai=sd.ai;if(R()>ai/95){if(ai<40&&R()<.3&&M.detail)line(M,`No changes from ${clubN(sd)} at the break, despite the first half.`,'n');return}
+  const b={...sd.base};let what;
+  if(diff<0){if(op.sty.line>.55){b.direct=cl(b.direct+.2,0,1);what='to go in behind their high line'}else{b.width=cl(b.width+.15,0,1);b.risk=cl(b.risk+.1,0,1);what='to push the full-backs on and stretch them'}}
+  else if(worse){b.line=cl(b.line-.1,.05,1);b.press=cl(b.press-.05,.05,1);what='to tighten up after being second best'}
+  else{b.press=cl(b.press+.12,.05,1);b.tempo=cl(b.tempo+.1,.05,1);what='to press higher and up the tempo'}
+  sd.base=b;sd.sty=b;sd.ment='normal';if(ai>=75){sd.boost+=1.5;sd._r=null}
+  if(M.detail)line(M,`Half-time change: ${sd.co?sd.co.name:'the coach'} has told ${clubN(sd)} ${what}.`,'n')}
