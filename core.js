@@ -208,22 +208,7 @@ function pickXI(cid){
 }
 function strength(cid,L){let s=0,n=0,m=0,lead=0;L.xi.forEach((p,i)=>{n++;if(!p){s+=20;m+=50;return}s+=(L.fc[p.id]??fit(p,L.tac,L.cb))-pen(p.pos,L.slots[i][0]);m+=p.mo;lead+=traitFx(p).lead||0});return s/n+(coachTa(cid)-60)*.08+(m/n-60)*.05+lead}
 const homeAdv=cid=>2+(isMe(cid)?pitchMod():0);
-function simMatch(f){
-  const Lh=pickXI(f.h),La=pickXI(f.a);let sh=strength(f.h,Lh)+homeAdv(f.h),sa=strength(f.a,La);
-  const act=[];[['h',Lh],['a',La]].forEach(([side,L])=>L.xi.forEach(p=>{if(!p)return;for(const id of p.tr){const s=SK[id];if(s&&s.act&&R()<s.act.ch)act.push({side,pid:p.id,sid:id,k:s.act.k,m:ri(5,85)})}}));
-  act.forEach(a=>{if(a.k==='tempo'){if(a.side==='h')sh+=6;else sa+=6}});
-  const d=sh-sa;let lh=cl(1.32*Math.exp(d/12),.12,5.5),la=cl(1.08*Math.exp(-d/12),.12,5.5);
-  act.forEach(a=>{if(a.k==='strike'){if(a.side==='h')lh*=1.6;else la*=1.6}if(a.k==='aegis'){if(a.side==='h')la*=.55;else lh*=.55}});
-  const cards=[];[['h',Lh],['a',La]].forEach(([s,L])=>{const on=L.xi.filter(Boolean);if(!on.length)return;const ny=pois(1.7);for(let i=0;i<ny;i++){const p=wpick(on,q=>q.pos==='DF'?3:q.pos==='MF'?2:q.pos==='GK'?.2:1);if(cards.some(c=>c.pid===p.id&&c.c!=='Y'))continue;const prev=cards.find(c=>c.pid===p.id&&c.c==='Y');if(prev){if(R()<.5)cards.push({side:s,pid:p.id,c:'R2',m:ri(Math.min(89,prev.m+1),90)})}else cards.push({side:s,pid:p.id,c:'Y',m:ri(4,88)})}if(R()<.04){const p=pick(on);if(!cards.some(c=>c.pid===p.id))cards.push({side:s,pid:p.id,c:'R',m:ri(10,88)})}});
-  cards.forEach(c=>{if(c.c!=='Y'){if(c.side==='h'){lh*=.85;la*=1.12}else{la*=.85;lh*=1.12}}});
-  let gh=pois(lh),ga=pois(la);
-  const ev=[];const mk=(side,L,m)=>{const on=L.xi.filter(Boolean);if(!on.length)return;const penk=R()<.12;const sc=penk?on.filter(p=>p.pos!=='GK').sort((a,b)=>eff(b,'tec')-eff(a,'tec'))[0]:wpick(on,p=>({GK:.02,DF:.7,MF:1.6,AM:3,ST:4}[p.pos])*Math.pow(p.ovr/60,1.2)*(1+(traitFx(p).clutch||0)*.5));const pool=on.filter(p=>p!==sc);const as=!penk&&R()<.75&&pool.length?wpick(pool,p=>({GK:.1,DF:.8,MF:2,AM:3,ST:1.5}[p.pos])):null;ev.push({m:m||ri(1,90),side,sc:sc.id,as:as?as.id:0,pen:penk,kind:penk?'pen':pick(['shot','shot','tap','header','long'])})};
-  for(let i=0;i<gh;i++)mk('h',Lh);for(let i=0;i<ga;i++)mk('a',La);
-  act.forEach(a=>{if(a.k==='miracle'){const gs=a.side==='h'?gh:ga,go=a.side==='h'?ga:gh;if(gs<=go){mk(a.side,a.side==='h'?Lh:La,ri(86,90));if(a.side==='h')gh++;else ga++}}});
-  ev.sort((a,b)=>a.m-b.m);
-  const mp=[];if(R()<.07){const side=R()<.5?'h':'a';const L=side==='h'?Lh:La;const on=L.xi.filter(p=>p&&p.pos!=='GK');if(on.length)mp.push({side,pid:on.sort((a,b)=>b.tec-a.tec)[0].id,m:ri(3,88)})}
-  return{Lh,La,gh,ga,ev,sh,sa,cards,act,mp,poss:cl(Math.round(50+d*1.3+nrm()*4),26,74),shH:gh+ri(3,9)+(d>2?2:0),shA:ga+ri(2,8)+(d<-2?2:0)};
-}
+function simMatch(f,detail){return runEngine(f,!!detail)}
 const BONUS={None:{cost:0,mo:-1,d:'No bonus. Cheap, but the squad notices.'},Standard:{cost:2000,mo:0,d:'A fair bonus per win. Morale unchanged.'},Generous:{cost:6000,mo:2,d:'Big win bonuses. Morale rises after every win.'}};
 function applyMatch(f,r){
   f.hs=r.gh;f.as=r.ga;const res={h:Math.sign(r.gh-r.ga),a:Math.sign(r.ga-r.gh)};
@@ -231,8 +216,8 @@ function applyMatch(f,r){
   const G={},A={};r.ev.forEach(e=>{G[e.sc]=(G[e.sc]||0)+1;if(e.as)A[e.as]=(A[e.as]||0)+1});
   const CY={};r.cards.forEach(c=>{const p=S.P[c.pid];if(!p)return;if(c.c==='Y')p.sY++;else{p.sRd++;p.ban=1}CY[c.pid]=c.c});
   const mine=isMe(f.h)||isMe(f.a);const rt={};const homeMine=isMe(f.h);
-  [['h',r.Lh,f.h,r.ga],['a',r.La,f.a,r.gh]].forEach(([s,L,cid,conc])=>{L.xi.forEach(p=>{if(!p)return;const tf=traitFx(p);
-    let x=6.3+nrm()*.45+res[s]*.35+(G[p.id]||0)*1.0+(A[p.id]||0)*.6+(tf.clutch||0)-(CY[p.id]&&CY[p.id]!=='Y'?1.2:0);if(p.pos==='GK'||p.pos==='DF')x+=conc===0?.6:-conc*.22;x=cl(Math.round(x*10)/10,4,10);rt[p.id]=x;
+  [['h',r.apps?r.apps.h:r.Lh.xi.filter(Boolean),f.h,r.ga],['a',r.apps?r.apps.a:r.La.xi.filter(Boolean),f.a,r.gh]].forEach(([s,XI,cid,conc])=>{XI.forEach(p=>{if(!p)return;const tf=traitFx(p);
+    let x=r.rtd?6.25+nrm()*.22+res[s]*.3+(r.rtd[p.id]||0)+(tf.clutch||0)*.5+((p.pos==='GK'||p.pos==='DF')&&conc===0?.5:0):6.3+nrm()*.45+res[s]*.35+(G[p.id]||0)*1.0+(A[p.id]||0)*.6+(tf.clutch||0)-(CY[p.id]&&CY[p.id]!=='Y'?1.2:0)+((p.pos==='GK'||p.pos==='DF')?(conc===0?.6:-conc*.22):0);x=cl(Math.round(x*10)/10,4,10);rt[p.id]=x;
     p.sA++;p.sG+=G[p.id]||0;p.sAs+=A[p.id]||0;p.sR+=x;const ca=p.ca[cid]||(p.ca[cid]=[0,0,0]);ca[0]++;ca[1]+=G[p.id]||0;ca[2]+=A[p.id]||0;
     p.mo=cl(p.mo+res[s]*2+(x>=7.5?1:0)+(isMe(cid)&&res[s]>0?BONUS[S.me.bonus].mo:0),0,100);if(tf.morale)p.mo=Math.max(p.mo,tf.morale);p.last=S.d;
     const ms=S.ms[p.id]||(S.ms[p.id]={a:0,r:0,g:0,as:0,c:cid});ms.a++;ms.r+=x;ms.g+=G[p.id]||0;ms.as+=A[p.id]||0;ms.c=cid;
