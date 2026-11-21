@@ -52,7 +52,12 @@ function mkSide(M,cid,k){const L=pickXI(cid);const co=coachOf(cid);const tac=L.t
   const sd={ai:coachAI(co),_M:M,k,cid,L,co,tac,base:{...(STY[tac]||STY['Total Football'])},sty:null,ment:'normal',g:0,on:[],bench:L.bench.slice(),subs:0,fouls:0,st:{shots:0,sot:0,corners:0,fouls:0,yc:0,rc:0,off:0,xg:0},boost:0,xgMul:1,oppXg:1,lastConceded:-999,reds:0,str:strength(cid,L)};
   L.xi.forEach((p,i)=>{if(!p)return;sd.on.push({p,a:attrs(p,tac,cb),role:L.slots[i][0],lane:L.slots[i][1],fat:0,f:0,y:false,off:false});M.rt[p.id]=0});
   sd.boost=(sd.ai-55)*.03;sd.sty=sd.base;return sd}
-const live=sd=>sd.on.filter(u=>!u.off);
+const ACTK=['short','fwd','long','carry','sw','cross'];
+const live=sd=>sd.lv||(sd.lv=sd.on.filter(u=>!u.off));
+const dirty=sd=>{sd.lv=null;sd.aw=null;sd._r=null};
+function zpick(list,ws){let t=0;for(let i=0;i<ws.length;i++)t+=ws[i];let r=R()*t;for(let i=0;i<ws.length;i++){if((r-=ws[i])<0)return list[i]}return list[list.length-1]}
+const AZ=[{DF:4,MF:2,AM:.6,ST:.3},{DF:1.2,MF:4,AM:2.5,ST:1},{DF:.4,MF:2,AM:4,ST:3.5}],DZ=[{DF:5,MF:2,AM:.5,ST:.2},{DF:1.5,MF:4,AM:2,ST:1},{DF:.3,MF:1.5,AM:3,ST:4}];
+function zt(sd){if(sd.aw)return sd.aw;const us=live(sd).filter(u=>u.role!=='GK');sd.aw={us,a:AZ.map(z=>us.map(u=>z[u.role]||1)),d:DZ.map(z=>us.map(u=>z[u.role]||1))};return sd.aw}
 const fq=(u,v)=>v*(1-.18*u.fat);
 const avgA=(us,f)=>us.length?us.reduce((s,u)=>s+fq(u,f(u.a)),0)/us.length:40;
 const byRoles=(sd,roles)=>live(sd).filter(u=>roles.includes(u.role));
@@ -85,7 +90,7 @@ function tickMinute(M){const m=Math.floor(M.t/60);if(m===M.minute)return;const s
     if(M.half===2&&M.t/60>=75-sd.ai*.25&&sd.subs<TUNE.maxSubs&&sd.bench.length&&R()<(.05+sd.ai/900)*steps){const tired=live(sd).filter(u=>u.role!=='GK').sort((a,b)=>b.fat-a.fat);let off=sd.ai<40&&R()<.5?pick(tired):tired[0];let want=off&&off.role;
       if(sd.ment==='chase'||sd.ment==='desperate'){const d=live(sd).filter(u=>u.role==='DF'||u.role==='MF').sort((a,b)=>b.fat-a.fat)[0];if(d&&R()<(sd.ai/120)){off=d;want='ST'}}
       if(off&&(off.fat>.32||sd.ment==='chase'||sd.ment==='desperate'||M.t/60>70)){const pool=sd.bench.filter(p=>p.pos!=='GK');const on=sd.ai<35&&R()<.4?pick(pool):(pool.filter(p=>p.pos===want).sort((a,b)=>b.ovr-a.ovr)[0]||pool.find(p=>pen(p.pos,off.role)<=6)||pool[0]);
-        if(on){sd.bench=sd.bench.filter(p=>p!==on);const u={p:on,a:attrs(on,sd.tac,cboost(sd.cid)),role:off.role===want?off.role:want||off.role,lane:off.lane,fat:0,f:0,y:false,off:false};off.off=true;off.subbed=true;sd.on.push(u);sd.subs++;M.rt[on.id]=0;M.subs.push({side:sd.k,off:off.p.id,on:on.id,m:Math.floor(M.t/60)+1});M.t+=25;sd._r=null;
+        if(on){sd.bench=sd.bench.filter(p=>p!==on);const u={p:on,a:attrs(on,sd.tac,cboost(sd.cid)),role:off.role===want?off.role:want||off.role,lane:off.lane,fat:0,f:0,y:false,off:false};off.off=true;off.subbed=true;sd.on.push(u);dirty(sd);sd.subs++;M.rt[on.id]=0;M.subs.push({side:sd.k,off:off.p.id,on:on.id,m:Math.floor(M.t/60)+1});M.t+=25;sd._r=null;
           log(M,'sub',{s:sd.k,off:off.p.id,on:on.id});if(M.detail)line(M,pick([`Change for ${clubN(sd)}: ${on.name} replaces ${off.p.name}${off.fat>.45?', who is out on his feet':''}.`,`${clubN(sd)} make a change: ${last(off.p.name)} off, ${on.name} on${sd.ment==='chase'||sd.ment==='desperate'?' to chase the game':''}.`,`Fresh legs for ${clubN(sd)}: ${on.name} comes on for ${last(off.p.name)}.`]),'s')}}}
   });
   // God skills fire at their minute
@@ -96,8 +101,8 @@ function tickMinute(M){const m=Math.floor(M.t/60);if(m===M.minute)return;const s
   if(M.detail&&M.t-M.lastLine>420)narrPulse(M);
 }
 const clubN=sd=>S.clubs[sd.cid].name;
-function actor(sd,z){const us=live(sd).filter(u=>u.role!=='GK');const w=u=>{const r=u.role;const zz=z<.33?{DF:4,MF:2,AM:.6,ST:.3}:z<.66?{DF:1.2,MF:4,AM:2.5,ST:1}:{DF:.4,MF:2,AM:4,ST:3.5};return(zz[r]||1)};return wpick(us,w)}
-function defender(sd,z){const us=live(sd).filter(u=>u.role!=='GK');const dz=1-z;const w=u=>{const zz=dz<.33?{DF:5,MF:2,AM:.5,ST:.2}:dz<.66?{DF:1.5,MF:4,AM:2,ST:1}:{DF:.3,MF:1.5,AM:3,ST:4};return zz[u.role]||1};return wpick(us,w)}
+function actor(sd,z){const t=zt(sd);return zpick(t.us,t.a[z<.33?0:z<.66?1:2])}
+function defender(sd,z){const t=zt(sd);const dz=1-z;return zpick(t.us,t.d[dz<.33?0:dz<.66?1:2])}
 const gkOf=sd=>byRoles(sd,['GK'])[0]||live(sd)[0];
 function rate(M,u,v){if(u)M.rt[u.p.id]=(M.rt[u.p.id]||0)+v}
 
@@ -115,7 +120,7 @@ function possession(M,sd,z,x,phase){
     // choose an action
     const w={short:1.6*(1-st.tempo)+.5,fwd:1.2+st.tempo*.8,long:z<.5?st.direct*1.6:st.direct*.4,carry:.9+fq(carrier,carrier.a.drb)/90,sw:st.width*.5*(z>.3&&z<.75?1:.3),cross:z>.66&&(x<.22||x>.78)?.35+st.width*.5:0};
     if(phase==='counter'){w.fwd*=2;w.carry*=1.6;w.short*=.3;w.sw=0}
-    const act=wpick(Object.keys(w),k=>w[k]);
+    const act=zpick(ACTK,[w.short,w.fwd,w.long,w.carry,w.sw,w.cross]);
     if(act==='cross'){M.poss[sd.k]+=M.t-startT;return chance(M,sd,carrier,z,x,phase,'cross')}
     const dt=act==='long'?5:act==='carry'?5+R()*3:3.5+(1-st.tempo)*6+R()*2.5;M.t+=dt;
     // the defending side's press bites hardest in our half
@@ -172,7 +177,7 @@ function foulCheck(M,dsd,dfn,asd,vic,z,x,phase){
     if(!card&&dfn.f===2)line(M,`${M.ref.name} has a word with ${d}. That's his second foul; the next one is a booking.`,'');
     if(!card&&dsd.fouls===8)line(M,`That's ${dsd.fouls} fouls from ${clubN(dsd)}. ${M.ref.strict>1.05?`${M.ref.name} won't put up with much more.`:'Persistent stuff.'}`,'n')}
   if(card){dfn.f=dfn.f;M.cards.push({side:dsd.k,pid:dfn.p.id,c:card,m:Math.floor(M.t/60)+1});log(M,'card',{s:dsd.k,pid:dfn.p.id,cc:card});
-    if(card==='Y'){dfn.y=true;dsd.st.yc++;rate(M,dfn,-.3)}else{dfn.off=true;dfn.sentOff=true;dsd.st.rc++;dsd.reds++;dsd._r=null;rate(M,dfn,-1.2);bumpMom(M,dsd,-.3)}
+    if(card==='Y'){dfn.y=true;dsd.st.yc++;rate(M,dfn,-.3)}else{dfn.off=true;dfn.sentOff=true;dirty(dsd);dsd.st.rc++;dsd.reds++;dsd._r=null;rate(M,dfn,-1.2);bumpMom(M,dsd,-.3)}
     if(M.detail){const n=dfn.p.name;line(M,card==='Y'?pick([`Yellow card for ${n}.${type==='tactical'?' He knew what he was doing.':''}`,`${M.ref.name} reaches for his pocket: yellow for ${n}.`,`${n} goes into the book.${dfn.f>=2?' It had been coming.':''}`]):card==='R2'?`Second yellow! ${n} is off, and ${clubN(dsd)} are down to ${live(dsd).length}.`:`Straight red! ${n} is sent off${dogso?': he denied a clear goalscoring chance':''}. ${clubN(dsd)} down to ${live(dsd).length}.`,'g')}}
   if(inBox){return penalty(M,asd,vic)}
   return{sd:asd,z,x,phase:'fk',fk:{taker:null,z,x}}

@@ -167,7 +167,8 @@ function createWorld(){
   }});
   SQ=null;for(const c of Object.values(S.clubs)){sqAll(c.id).forEach(p=>p.num=0);sqAll(c.id).forEach(p=>p.num=freeNum(c.id))}
   for(let i=0;i<10;i++)S.pool.push(genCoach(ri(45,80)).id);
-  genFixtures();
+  S.news=[];ensureAI();Object.values(S.P).forEach(p=>{if(p.gem)p.origin=p.club});
+  genFixtures();cupsSetup();
 }
 function genFixtures(){
   S.fx=[];const sd=seasonStart(S.season);
@@ -222,7 +223,7 @@ function applyMatch(f,r){
   const mine=isMe(f.h)||isMe(f.a);const rt={};const homeMine=isMe(f.h);
   [['h',r.apps?r.apps.h:r.Lh.xi.filter(Boolean),f.h,r.ga],['a',r.apps?r.apps.a:r.La.xi.filter(Boolean),f.a,r.gh]].forEach(([s,XI,cid,conc])=>{XI.forEach(p=>{if(!p)return;const tf=traitFx(p);
     let x=r.rtd?6.25+nrm()*.22+res[s]*.3+(r.rtd[p.id]||0)+(tf.clutch||0)*.5+((p.pos==='GK'||p.pos==='DF')&&conc===0?.5:0):6.3+nrm()*.45+res[s]*.35+(G[p.id]||0)*1.0+(A[p.id]||0)*.6+(tf.clutch||0)-(CY[p.id]&&CY[p.id]!=='Y'?1.2:0)+((p.pos==='GK'||p.pos==='DF')?(conc===0?.6:-conc*.22):0);x=cl(Math.round(x*10)/10,4,10);rt[p.id]=x;
-    p.sA++;p.sG+=G[p.id]||0;p.sAs+=A[p.id]||0;p.sR+=x;const ca=p.ca[cid]||(p.ca[cid]=[0,0,0]);ca[0]++;ca[1]+=G[p.id]||0;ca[2]+=A[p.id]||0;
+    p.sA++;p.sG+=G[p.id]||0;p.sAs+=A[p.id]||0;p.sR+=x;const ca=p.ca[cid]||(p.ca[cid]=[0,0,0]);ca[0]++;ca[1]+=G[p.id]||0;ca[2]+=A[p.id]||0;const scs=(p.sc||(p.sc={}))[cid]||(p.sc[cid]=[0,0,0,0]);scs[0]++;scs[1]+=G[p.id]||0;scs[2]+=A[p.id]||0;scs[3]+=x;
     p.mo=cl(p.mo+res[s]*2+(x>=7.5?1:0)+(isMe(cid)&&res[s]>0?BONUS[S.me.bonus].mo:0),0,100);if(tf.morale)p.mo=Math.max(p.mo,tf.morale);p.last=S.d;
     const ms=S.ms[p.id]||(S.ms[p.id]={a:0,r:0,g:0,as:0,c:cid});ms.a++;ms.r+=x;ms.g+=G[p.id]||0;ms.as+=A[p.id]||0;ms.c=cid;
     let injr=.02*(1-(tf.inj||0)/100);const fl=S.clubs[cid].fl;injr*=isMe(cid)?(1-S.me.fac.md*.035):(1-(fl?fl.md:5)*.03);if(isMe(cid)&&homeMine)injr*=S.me.pitch.c<20?2.2:S.me.pitch.c<40?1.6:1;
@@ -239,8 +240,10 @@ function applyMatch(f,r){
     const diff=gf-ga;const rb=S.rec[S.me.cid]||(S.rec[S.me.cid]={});if(diff>0&&(!rb.win||diff>rb.win.diff))rb.win={diff,txt:`${gf}-${ga} v ${S.clubs[home?f.a:f.h].name}`,s:S.season};
     f.rt=rt;f.ev=r.ev.map(e=>({m:e.m,side:e.side,sc:S.P[e.sc]?.name||'',pen:e.pen}));
   }
+  if(f.cup)cupTie(f,r);
 }
-function simOthersToday(){for(const f of S.fx)if(f.d===S.d&&f.hs===null&&!isMe(f.h)&&!isMe(f.a))applyMatch(f,simMatch(f))}
+
+function simOthersToday(){cupAdvance();for(const f of S.fx)if(f.d===S.d&&f.hs===null&&!isMe(f.h)&&!isMe(f.a))applyMatch(f,simMatch(f))}
 const myFixtureToday=()=>S.fx.find(f=>f.d===S.d&&f.hs===null&&(isMe(f.h)||isMe(f.a)));
 const nextFixture=()=>S.fx.filter(f=>f.hs===null&&(isMe(f.h)||isMe(f.a))).sort((a,b)=>a.d-b.d)[0];
 const avgOvr=cid=>{const L=pickXI(cid).xi.filter(Boolean);return Math.round(L.reduce((s,p)=>s+p.ovr,0)/(L.length||1))};
@@ -305,10 +308,10 @@ function agency(pos,minOvr,maxAge,emph,n,src='Agency brief'){const out=[];const 
 const faFee=p=>Math.round(p.val*.3/1000)*1000;
 
 /* ---------- transfers ---------- */
-function bidFor(p){const c=me();const buyers=Object.values(S.clubs).filter(x=>x.id!==c.id&&lq(x)>=lq(c)-8&&lq(x)<=lq(c)+14);const b=pick(buyers);const fee=Math.round(p.val*(.8+R()*.75)/1000)*1000;S.tr.inc.unshift({id:++S.nid,pid:p.id,club:b.id,fee,d:S.d,exp:S.d+7,st:'open'});mail('bidinfo',{pid:p.id,club:b.id,fee})}
+function bidFor(p){const c=me();const buyers=Object.values(S.clubs).filter(x=>x.id!==c.id&&lq(x)>=lq(c)-8&&lq(x)<=lq(c)+14&&(x.money||0)>p.val*1.2);if(!buyers.length)return;const b=pick(buyers);const fee=Math.round(p.val*(.8+R()*.75)/1000)*1000;S.tr.inc.unshift({id:++S.nid,pid:p.id,club:b.id,fee,d:S.d,exp:S.d+7,st:'open'});mail('bidinfo',{pid:p.id,club:b.id,fee})}
 function trHist(txt,fee,dir){S.tr.hist.unshift({d:S.d,s:S.season,txt,fee,dir});if(S.tr.hist.length>120)S.tr.hist.length=120;S.me.log.push({s:S.season,d:S.d,txt})}
-function sellTo(p,club,fee){planReactSell(p);p.club=club;SQ=null;p.num=freeNum(club);S.me.money+=fee;S.me.fin.tr+=fee;S.me.force=S.me.force.filter(x=>x!==p.id);trHist(`Sold ${p.name} to ${S.clubs[club].name}`,fee,'out')}
-function completeSign(p,fee){const from=p.club;S.me.money-=fee;S.me.fin.tr-=fee;p.club=S.me.cid;p.yth=false;SQ=null;p.num=freeNum(S.me.cid);p.mo=cl(p.mo+10,0,100);p.last=S.d;S.me.short=S.me.short.filter(x=>x!==p.id);if(from)refill(from);planReactSign(p);trHist(`Signed ${p.name}${from?` from ${S.clubs[from].name}`:' (free agent)'}`,fee,'in')}
+function sellTo(p,club,fee){planReactSell(p);S.clubs[club].money=(S.clubs[club].money||0)-fee;moveRec(p,S.me.cid,club,fee,'transfer');news('transfer',`${p.name} (${p.pos}, ${p.ovr}) ${me().name} → ${S.clubs[club].name} · ${money(fee)}`,[S.me.cid,club]);p.club=club;SQ=null;p.num=freeNum(club);S.me.money+=fee;S.me.fin.tr+=fee;S.me.force=S.me.force.filter(x=>x!==p.id);trHist(`Sold ${p.name} to ${S.clubs[club].name}`,fee,'out')}
+function completeSign(p,fee){const from=p.club;if(from){S.clubs[from].money=(S.clubs[from].money||0)+fee}moveRec(p,from,S.me.cid,fee,from?'transfer':'free');news('transfer',`${p.name} (${p.pos}, ${p.ovr}) ${from?`${S.clubs[from].name} → ${me().name}`:`signs for ${me().name} as a free agent`}${fee?` · ${money(fee)}`:''}`,[from,S.me.cid].filter(Boolean));S.me.money-=fee;S.me.fin.tr-=fee;p.club=S.me.cid;p.yth=false;SQ=null;p.num=freeNum(S.me.cid);p.mo=cl(p.mo+10,0,100);p.last=S.d;S.me.short=S.me.short.filter(x=>x!==p.id);if(from)refill(from);planReactSign(p);trHist(`Signed ${p.name}${from?` from ${S.clubs[from].name}`:' (free agent)'}`,fee,'in')}
 function signFree(p){const fee=faFee(p);if(p.club)return'He has a club. Make an offer instead.';if(S.me.money<fee)return `Not enough money: you need ${money(fee)}. Top up in the Store.`;if(!boss()&&R()>interest(p))return `${p.name} isn't interested in joining ${me().name}.`;completeSign(p,fee);return `${p.name} signs! Fee ${money(fee)}.`}
 function makeOffer(p,fee){if(p.club===S.me.cid)return'Already ours.';if(!p.club)return signFree(p);if(S.tr.out.some(o=>o.pid===p.id&&(o.st==='pending'||o.st==='countered')))return'You already have an offer on the table for him.';S.tr.out.unshift({id:++S.nid,pid:p.id,from:p.club,fee,d:S.d,due:S.d+ri(1,3),st:'pending'});return `Offer of ${money(fee)} sent to ${S.clubs[p.club].name}. Expect an answer within 3 days.`}
 function resolveOut(o){const p=S.P[o.pid];if(!p||p.club!==o.from){o.st='failed';o.msg='He moved elsewhere.';return}const club=S.clubs[o.from];
@@ -320,7 +323,7 @@ function refill(cid){const c=S.clubs[cid];const s=sq(cid);for(const pos of POSL)
 /* ---------- time ---------- */
 function randomMail(){
   const r=R();const my=sq(S.me.cid);if(!my.length)return;
-  if(inWindow()&&r<.3){const p=wpick(my,p=>Math.pow(p.ovr/45,4)*(p.gem?3:1));bidFor(p);return}
+  if(inWindow()&&r<.12){const p=wpick(my,p=>Math.pow(p.ovr/45,4)*(p.gem?3:1));bidFor(p);return}
   if(r<.42){const L=pickXI(S.me.cid);const outs=my.filter(p=>!L.xi.includes(p)&&p.inj<=0&&S.d-p.last>20&&p.age>20).sort((a,b)=>b.ovr-a.ovr);if(outs[0]&&!S.mail.some(m=>m.type==='unhappy'&&m.data.pid===outs[0].id&&S.d-m.d<40)){mail('unhappy',{pid:outs[0].id});return}}
   if(r<.6){scoutReport();return}
   if(r<.67){const co=coachOf(S.me.cid);if(!co)return;const w=TAC[co.tac];const emph=ATT[w.indexOf(Math.max(...w))];const{weak}=coachPlan();mail('coachreq',{pos:weak[0]||'ST',emph});return}
@@ -333,8 +336,9 @@ function randomMail(){
 function advanceDay(){
   S.d++;const o=dobj(S.d);
   if(o.m===6&&o.day===1)endSeason();
-  if(o.day===1)monthly(o);
-  if(o.m===3&&o.day===1)youthIntake();
+  if(o.day===1){monthly(o);aiMonthly()}
+  if(o.m===3&&o.day===1){youthIntake();aiYouth()}
+  aiTransferDay();cupAdvance();
   if(o.wd===1)develop();
   for(const p of Object.values(S.P))if(p.inj>0)p.inj--;
   S.me.pitch.c=cl(S.me.pitch.c+PLANS[S.me.pitch.plan].rec-.15-(R()<.1?R()*2:0),0,100);
@@ -406,19 +410,19 @@ function endSeason(){
     rec.lgs.push({lg,champ:tb[0].c,champName:ch.name,ts:ts?{name:ts.name,club:ts.club,g:ts.sG}:null,pots:pots?{name:pots.name,club:pots.club,avg:(pots.sR/pots.sA).toFixed(2)}:null});
   });
   const orbW=rec.orb[0];if(orbW&&S.P[orbW.id]){S.P[orbW.id].aw.push(`Golden Orb ${seasonLbl(s)}`);S.clubs[orbW.club].rep=cl(S.clubs[orbW.club].rep+2,0,99)}
-  S.seasons.push(rec);
+  rec.cups=S.cups?Object.values(S.cups).filter(C=>C.winner).map(C=>{const fin=C.rounds.at(-1).ties[0];return{id:C.id,w:C.winner,ru:fin.w===fin.h?fin.a:fin.h,sc:`${fin.hs}-${fin.as}${fin.pens?` (${fin.pens.join('-')} pens)`:''}`}}):[];S.seasons.push(rec);careerClose(s);aiSeasonReview();
   const pos=table(myLg).findIndex(r=>r.c===S.me.cid)+1;
   mv.forEach(([id,lg])=>{const cc=S.clubs[id];cc.lg=lg;cc.t=LEAGUES[lg].tier});
   const hit=pos<=exp.tgt;c.fans=S.me.unl.fanlock?100:cl(c.fans+(hit?8:-10),0,100);c.rep=cl(c.rep+(hit?2:-2),0,99);S.me.board=cl(S.me.board+(hit?10:-12),0,100);S.me.seeds+=25;
   for(const p of Object.values(S.P)){p.age++;if(p.club===S.me.cid&&!p.yth&&p.sA)p.seasons=(p.seasons||0)+1;p.sA=p.sG=p.sAs=p.sR=p.sY=p.sRd=0;p.ban=0;
     const life=(traitFx(p).life||0)/10;
-    if(p.age>=33+life&&R()<(p.age-32-life)*.2){const ca=p.ca[S.me.cid];if(ca&&ca[0]>=10)S.retired.push({name:p.name,pos:p.pos,apps:ca[0],g:ca[1],as:ca[2],peak:p.ovr,ret:s,aw:p.aw,tr:p.tr});if(p.club===S.me.cid)S.me.log.push({s,d:S.d,txt:`${p.name} retired`});delete S.P[p.id];S.me.short=S.me.short.filter(x=>x!==p.id);S.me.force=S.me.force.filter(x=>x!==p.id);continue}
+    if(p.age>=33+life&&R()<(p.age-32-life)*.2){const ca=p.ca[S.me.cid];if(ca&&ca[0]>=10)S.retired.push({name:p.name,pos:p.pos,apps:ca[0],g:ca[1],as:ca[2],peak:p.ovr,ret:s,aw:p.aw,tr:p.tr,hist:p.hist});if(p.club===S.me.cid)S.me.log.push({s,d:S.d,txt:`${p.name} retired`});delete S.P[p.id];S.me.short=S.me.short.filter(x=>x!==p.id);S.me.force=S.me.force.filter(x=>x!==p.id);continue}
     if(p.yth&&p.age>=19)p.yth=false;setVal(p)}
   for(const id in S.P){const p=S.P[id];if(!p.club&&!S.me.short.includes(p.id))delete S.P[id]}
   SQ=null;for(const cc of Object.values(S.clubs))if(cc.id!==S.me.cid){refill(cc.id);if(R()<.5&&!sqAll(cc.id).some(p=>p.gem&&p.age<=21))genGem(cc.id,cc.t,cc.fl?cc.fl.ac:5)}SQ=null;
   const mys=sq(S.me.cid);const mins={GK:1,DF:4,MF:3,AM:1,ST:2};let filled=[];for(const ps of POSL){const h=mys.filter(p=>p.pos===ps).length;for(let k=h;k<mins[ps];k++){const p=genPlayer(ps,lq(me())-4,ri(20,29),S.me.cid);SQ=null;p.num=freeNum(S.me.cid);filled.push(p.name)}}
   for(const co of Object.values(S.C))co.age++;
-  S.season++;S.me.mv={up:0,dn:0};S.me.force=[];genFixtures();S._seasonEnd=true;
+  S.season++;S.me.mv={up:0,dn:0};S.me.force=[];genFixtures();cupsSetup();S._seasonEnd=true;
   const moved=me().lg!==myLg;
   if(orbW)mail('award',{title:`Golden Orb ${seasonLbl(s)}: ${orbW.name}`,html:`<p>The best player in the world this season is <b>${esc(orbW.name)}</b> (${esc(orbW.clubName)}, ${esc(LEAGUES[orbW.lg].n)}) · ${orbW.g} goals, ${orbW.as} assists, average rating ${orbW.avg}.</p><ol>${rec.orb.map(x=>`<li>${esc(x.name)} · ${esc(x.clubName)}${x.club===S.me.cid?' ⭐':''}</li>`).join('')}</ol>`});
   mail('board',{title:`Season review ${seasonLbl(s)}`,html:`<p>We finished <b>${ord(pos)}</b> in the ${LEAGUES[myLg].n}. The target was: ${exp.txt.toLowerCase()} (${ord(exp.tgt)} or better).</p><p>${moved?(LEAGUES[me().lg].tier<LEAGUES[myLg].tier?`<b>Promoted!</b> Next season we play in the ${lgName(me())}.`:`<b>Relegated.</b> Next season we drop to the ${lgName(me())}.`):`We stay in the ${lgName(me())}.`}</p><p>${hit?'The board is pleased. Fans are behind you.':'The board expected more. Fans are restless.'}</p><p>+25 seeds for the Lab.</p>${filled.length?`<p class="mut">The board signed free agents to fill gaps: ${filled.map(esc).join(', ')}.</p>`:''}<p>New target for ${seasonLbl(S.season)}: <b>${expectation().txt}</b>.</p>`});
@@ -430,6 +434,6 @@ const fuseChance=(t,seeds,copy)=>Math.min(.95,(1-Math.pow(1-SEEDP[t],seeds))*(co
 
 /* ---------- save ---------- */
 function save(){try{const j=JSON.stringify(S);localStorage.setItem(SKEY,window.LZString?'z'+LZString.compressToUTF16(j):'j'+j)}catch(e){console.warn('save failed',e)}}
-function load(){try{const s=localStorage.getItem(SKEY);if(s){S=JSON.parse(s[0]==='z'?LZString.decompressFromUTF16(s.slice(1)):s.slice(1));SQ=null;return true}}catch(e){}return false}
+function load(){try{const s=localStorage.getItem(SKEY);if(s){S=JSON.parse(s[0]==='z'?LZString.decompressFromUTF16(s.slice(1)):s.slice(1));SQ=null;ensureAI();if(!S.news)S.news=[];if(!S.cups)cupsSetup();return true}}catch(e){}return false}
 const exportSave=()=>{const j=JSON.stringify(S);return window.LZString?'LFF3:'+LZString.compressToBase64(j):j};
 const importSave=t=>{t=t.trim();return JSON.parse(t.startsWith('LFF3:')?LZString.decompressFromBase64(t.slice(5)):t)};
