@@ -168,7 +168,7 @@ function foulCheck(M,dsd,dfn,asd,vic,z,x,phase){
     line(M,pick(txt),type==='clumsy'?'m':'');
     if(!card&&dfn.f===2)line(M,`${M.ref.name} has a word with ${d}. That's his second foul; the next one is a booking.`,'');
     if(!card&&dsd.fouls===8)line(M,`That's ${dsd.fouls} fouls from ${clubN(dsd)}. ${M.ref.strict>1.05?`${M.ref.name} won't put up with much more.`:'Persistent stuff.'}`,'n')}
-  if(card){dfn.f=dfn.f;M.cards.push({side:dsd.k,pid:dfn.p.id,c:card,m:Math.floor(M.t/60)+1});log(M,'card',{s:dsd.k,pid:dfn.p.id,c:card});
+  if(card){dfn.f=dfn.f;M.cards.push({side:dsd.k,pid:dfn.p.id,c:card,m:Math.floor(M.t/60)+1});log(M,'card',{s:dsd.k,pid:dfn.p.id,cc:card});
     if(card==='Y'){dfn.y=true;dsd.st.yc++;rate(M,dfn,-.3)}else{dfn.off=true;dfn.sentOff=true;dsd.st.rc++;dsd.reds++;dsd._r=null;rate(M,dfn,-1.2);bumpMom(M,dsd,-.3)}
     if(M.detail){const n=dfn.p.name;line(M,card==='Y'?pick([`Yellow card for ${n}.${type==='tactical'?' He knew what he was doing.':''}`,`${M.ref.name} reaches for his pocket: yellow for ${n}.`,`${n} goes into the book.${dfn.f>=2?' It had been coming.':''}`]):card==='R2'?`Second yellow! ${n} is off, and ${clubN(dsd)} are down to ${live(dsd).length}.`:`Straight red! ${n} is sent off${dogso?': he denied a clear goalscoring chance':''}. ${clubN(dsd)} down to ${live(dsd).length}.`,'g')}}
   if(inBox){return penalty(M,asd,vic)}
@@ -213,9 +213,10 @@ function shoot(M,sd,sh,cr,xg,kind,type,setpiece){
   if(r<pBlock){const b=defender(op,.9);rate(M,b,.12);log(M,'shot',{s:sd.k,pid:sh.p.id,z:sx,x:tx,out:'block',bid:b.p.id});if(M.detail)line(M,pick([`Blocked by ${last(b.p.name)}!`,`${last(b.p.name)} throws himself in the way.`]),'');
     bumpMom(M,sd,.04);if(R()<TUNE.cornerBlock)return corner(M,sd);if(R()<.25)return rebound(M,sd);return{sd:op,z:.15,x:.5,phase:R()<.3?'counter':'open'}}
   if(r<pBlock+pOn*(1-pBlock)){sd.st.sot++;rate(M,g,.25+xg);rate(M,sh,.1);log(M,'shot',{s:sd.k,pid:sh.p.id,z:sx,x:tx,out:'save',gk:g.p.id});
-    if(M.detail)line(M,big?pick([`What a save from ${g.p.name}! He had no right to keep that out.`,`${last(g.p.name)} stands tall and denies ${last(sh.p.name)}!`]):pick([`Saved by ${last(g.p.name)}.`,`Straight at ${last(g.p.name)}.`,`${last(g.p.name)} gets down to hold it.`]),big?'g':'');
+    const nx=R()<TUNE.cornerSave?'corner':R()<.1+xg*.3?'rebound':'hold';
+    if(M.detail)line(M,(big?pick([`What a save from ${g.p.name}!`,`${last(g.p.name)} stands tall and denies ${last(sh.p.name)}!`])+' ':'')+(nx==='corner'?pick([`${last(g.p.name)} tips it round the post.`,`Pushed behind by ${last(g.p.name)}.`]):nx==='rebound'?`${last(g.p.name)} can only parry it...`:pick([`${last(g.p.name)} holds on.`,`Straight at ${last(g.p.name)}.`,`${last(g.p.name)} gets down to gather it.`])),big?'g':'');
     bumpMom(M,sd,big?.1:.05);if(big)M.nearMiss=(M.nearMiss||0)+1;
-    if(R()<TUNE.cornerSave)return corner(M,sd);if(R()<.1+xg*.3)return rebound(M,sd);return{sd:op,z:.05,x:.5,phase:'gk'}}
+    if(nx==='corner')return corner(M,sd);if(nx==='rebound')return rebound(M,sd);return{sd:op,z:.05,x:.5,phase:'gk'}}
   rate(M,sh,big?-.2:-.03);const post=R()<.07;log(M,'shot',{s:sd.k,pid:sh.p.id,z:sx,x:post?.43:(R()<.5?.36:.64),out:post?'post':'wide'});
   if(M.detail)line(M,post?pick([`Off the post! ${sh.p.name} so close!`,`${last(sh.p.name)} hits the woodwork!`]):big?pick([`${sh.p.name} has to score... and he misses! Wide!`,`Huge chance gone. ${last(sh.p.name)} drags it wide.`]):pick([`Wide from ${last(sh.p.name)}.`,`${last(sh.p.name)} lifts it over the bar.`,kind==='long'?`Ambitious from range, and well off target.`:`${last(sh.p.name)} snatches at it. Off target.`]),post||big?'g':'m');
   bumpMom(M,sd,post||big?.08:.02);if(post||big)M.nearMiss=(M.nearMiss||0)+1;
