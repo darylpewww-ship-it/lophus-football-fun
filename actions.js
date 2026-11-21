@@ -73,7 +73,7 @@ copysave:()=>{const s=exportSave();navigator.clipboard?.writeText(s).then(()=>to
 importsave:()=>{try{const o=importSave($('#imp').value);if(!o.clubs||!o.me||o.v!==3)throw 0;S=o;SQ=null;save();go('home');toast('Save loaded.')}catch(e){toast('That save code is not valid for this version.')}},
 mgrname:()=>{S.me.name=$('#mgrName').value.trim()||S.me.name;save();render();toast('Name saved.')},
 asknew:()=>{S.ui.confirmNew=1;render()},cancelnew:()=>{S.ui.confirmNew=0;render()},
-rescale:()=>{if(S.scale===2)return;const b=avgOvr(S.me.cid);rescaleWorld();save();render();toast(`Done. Your team OVR went from ${b} to ${avgOvr(S.me.cid)}.`)},newgame:()=>{SWid++;SWpend=false;clearTimeout(SVT);SVT=null;SVdirty=false;try{localStorage.removeItem(SKEY)}catch(e){}S=null;TMP=null;render()},
+rescale:()=>{if(S.scale===3)return;const b=avgOvr(S.me.cid);rescaleWorld();save();render();toast(`Done. Your team OVR went from ${b} to ${avgOvr(S.me.cid)}.`)},newgame:()=>{SWid++;SWpend=false;clearTimeout(SVT);SVT=null;SVdirty=false;try{localStorage.removeItem(SKEY)}catch(e){}S=null;TMP=null;render()},
 st:t=>{TMP.ui.mgr=$('#mgr').value;TMP.ui.st=+t;startScreen()},stn:n=>{TMP.ui.mgr=$('#mgr').value;TMP.ui.st=n==='en'?3:LEAGUES.findIndex(l=>l.nat===n);startScreen()},
 reroll:()=>{const mg=$('#mgr').value,st=TMP.ui.st;TMP=null;startScreen();TMP.ui.mgr=mg;TMP.ui.st=st;startScreen()},
 pickclub:id=>{const name=$('#mgr').value.trim()||'Gaffer';S=TMP;TMP=null;SQ=null;const c=S.clubs[id];

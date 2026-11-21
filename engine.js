@@ -170,7 +170,8 @@ function foulCheck(M,dsd,dfn,asd,vic,z,x,phase){
   const dogso=z>.8&&phase==='counter'&&dfn.role==='DF'&&R()<.25;if(dogso)sev+=.55;
   sev+=(M.ref.strict-1)*.3+(dfn.f>=2?.2:0)+(dsd.fouls>=9&&R()<.4?.12:0)+(dsd.ment==='desperate'?.08:0)+nrm()*.06;
   const inBox=z>=.84&&x>.2&&x<.8&&(phase==='solo'||R()<.12);
-  let card=null;if(sev>=TUNE.red)card='R';else if(sev>=TUNE.yellow&&!(dfn.y&&sev<TUNE.yellow+.12))card=dfn.y?'R2':'Y';
+  const minute=Math.floor(M.t/60)+1;const desperate=minute>75&&dsd.g<dsd.opp.g;const persistent=dfn.f>=3;const clear=type==='dangerous'||dogso||type==='tactical'||(type==='reckless'&&sev>=TUNE.yellow+.08);
+  let card=null;if(sev>=TUNE.red&&(type==='dangerous'||dogso))card='R';else if((clear||persistent||desperate)&&(sev>=TUNE.yellow||persistent&&dfn.f>=3&&!dfn.warned3)&&!(dfn.y&&sev<TUNE.yellow+.12))card=dfn.y?'R2':'Y';if(persistent)dfn.warned3=true;
   log(M,'foul',{s:dsd.k,pid:dfn.p.id,vid:vic.p.id,z:1-z,x:1-x,ft:type});
   if(M.detail){const v=last(vic.p.name),d=last(dfn.p.name);
     const txt={tactical:[`${d} pulls back ${v} to stop the break. Cynical, but it works.`,`${d} takes one for the team, hauling down ${v} on the counter.`],dangerous:[`Horrible challenge from ${d}! Studs up on ${v}.`,`${d} goes in high and late on ${v}. That's dangerous.`],reckless:[`${d} flies into ${v}. Reckless.`,`Late from ${d}, and ${v} is down.`],clumsy:[`${d} clips ${v}. Free kick.`,`A clumsy one from ${d} on ${v}.`,`${v} goes down under ${d}'s challenge. The referee gives it.`]}[type];
@@ -247,7 +248,7 @@ function goalStory(M,sd,op,mm){const d=sd.g-op.g;const n=clubN(sd),o=clubN(op);i
 function taker(sd){return live(sd).filter(u=>u.role!=='GK').sort((a,b)=>fq(b,b.a.setp)-fq(a,a.a.setp))[0]}
 function corner(M,sd){const op=sd.opp;sd.st.corners++;bumpMom(M,sd,.03);M.t+=22;M.stops++;
   const tk=taker(sd);const R1=teamR(sd),R2=teamR(op);const adv=R1.aerA-R2.aerD;const ta=(sd.co?sd.co.ta:55);
-  const rw={near:2+Math.max(0,adv)*.05,far:2+R1.aerA/40,driven:1+fq(tk,tk.a.setp)/60,short:1+(1-sd.sty.tempo)*1.5+(adv<-5?1.2:0),edge:.9+(avgA(live(sd).filter(u=>u.role==='MF'||u.role==='AM'),a=>a.tec)-60)*.04,routine:.25+ta/120};
+  const rw={near:25*(1+Math.max(0,adv)*.02),far:30*(R1.aerA/60),driven:10*(fq(tk,tk.a.setp)/60),short:15*(1+(1-sd.sty.tempo)*.6+(adv<-5?.5:0)),edge:20*(1+(avgA(live(sd).filter(u=>u.role==='MF'||u.role==='AM'),a=>a.tec)-60)*.02),routine:3+ta/20};
   const sharp=.4+sd.ai/50;const rt=wpick(Object.keys(rw),k=>Math.pow(Math.max(.1,rw[k]),sharp));const side=R()<.5?0:1;
   const RN={near:'an in-swinger to the near post',far:'a deep floated ball to the far post',driven:'a driven ball across the six-yard box',short:'it short',edge:'it to the edge of the box',routine:'a training-ground routine'};
   log(M,'corner',{s:sd.k,pid:tk.p.id,side,rt});
