@@ -79,7 +79,7 @@ const SK={},SKB=[],SKX=[];
 })();
 const tierOf=id=>SK[id]?SK[id].t:8;
 const tierCol=t=>TIERS[t].col;
-function fxText(fx){const o=[];for(const k in fx){const v=fx[k];o.push(k in AL?`${AL[k]} +${v}`:k==='grow'?`Growth +${v}%`:k==='life'?`Lifespan +${v}%`:k==='morale'?`Morale never below ${v}`:k==='inj'?`Injury risk −${v}%`:k==='clutch'?`Match rating +${v}, more goals`:k==='lead'?`Team strength +${v}`:k==='cap'?`All stat caps +${v}`:k)}return o.join(' · ')}
+function fxText(fx,co){if(co)return cfxText(fx);const o=[];for(const k in fx){const v=fx[k];o.push(k in AL?`${AL[k]} +${v}`:k==='grow'?`Growth +${v}%`:k==='life'?`Lifespan +${v}%`:k==='morale'?`Morale never below ${v}`:k==='inj'?`Injury risk −${v}%`:k==='clutch'?`Match rating +${v}, more goals`:k==='lead'?`Team strength +${v}`:k==='cap'?`All stat caps +${v}`:k)}return o.join(' · ')}
 function rollTier(){const tot=TIERS.reduce((s,t)=>s+t.w,0);let r=R()*tot;for(let i=8;i>=0;i--){if((r-=TIERS[i].w)<0)return i}return 8}
 function rollSkill(minTier=8){let t=rollTier();t=Math.min(t,minTier);const mix=R()<.07;const l=mix?SKX[t]:SKB[t];return pick(l).id}
 function rollTraits(p,boost=0){p.tr=p.tr||[];if(R()>.33+boost)return;const n=R()<.75?1:R()<.8?2:3;for(let i=0;i<n;i++){const id=rollSkill();if(!p.tr.includes(id))p.tr.push(id)}}
@@ -112,7 +112,7 @@ function genPlayer(pos,target,age,club=0,potBoost=0,emph=null){
 function genGem(club,t,youthLvl){const pos=pick(['DF','MF','AM','ST','ST','AM','GK']);const age=ri(16,18);const lowTarget=cl(Math.round(32+youthLvl*1.2+(5-t)*2+ri(-4,5)),30,60);const p=genPlayer(pos,lowTarget,age,club);const want=ri(90,97);
   for(let k=0;k<40&&p.pot<want;k++){const a=pick(ATT);if(p.cap[a]<99)p.cap[a]++;p.pot=calcOvr(p,p.cap)}
   p.gem=true;rollTraits(p,.35);setVal(p);return p}
-function genCoach(q,club=0){const cn=club&&S.clubs[club]?S.clubs[club].nat:null;const n=cn&&R()<.7&&FN[cn]?cn:nat();const c={id:++S.nid,name:pname(n),nat:n,age:ri(36,64),tac:pick(Object.keys(TAC)),form:pick(Object.keys(FORMS)),ta:cl(Math.round(q+nrm()*9),25,97),dv:cl(Math.round(q+nrm()*9),25,97),mm:cl(Math.round(q+nrm()*9),25,97),club,aw:[]};c.ai=cl(Math.round(c.ta*.6+q*.25+nrm()*12+5),8,99);c.wage=Math.round((Math.max(0,c.ta+c.dv+c.mm-120)*230+2500)/100)*100;S.C[c.id]=c;return c}
+function genCoach(q,club=0){const cn=club&&S.clubs[club]?S.clubs[club].nat:null;const n=cn&&R()<.7&&FN[cn]?cn:nat();const c={id:++S.nid,name:pname(n),nat:n,age:ri(36,64),tac:pick(Object.keys(TAC)),form:pick(Object.keys(FORMS)),ta:cl(Math.round(q+nrm()*9),25,97),dv:cl(Math.round(q+nrm()*9),25,97),mm:cl(Math.round(q+nrm()*9),25,97),club,aw:[]};c.ai=cl(Math.round(c.ta*.6+q*.25+nrm()*12+5),8,99);c.wage=Math.round((Math.max(0,c.ta+c.dv+c.mm-120)*230+2500)/100)*100;c.ctr=club?ri(12,36):0;c.tr=[];c.hist=[];if(typeof rollCoachTraits==='function')rollCoachTraits(c);S.C[c.id]=c;return c}
 function shortName(n){const w=n.split(' ').filter(x=>!['FC'].includes(x));let s=w.map(x=>x[0]).join('').toUpperCase();if(s.length<2)s=n.slice(0,3).toUpperCase();return s.slice(0,3)}
 function clubName(used){for(let k=0;k<300;k++){const town=pick(PRE)+pick(SUF);const t=pick(TYPES);const n=(t==='Sporting'||t==='Dynamo')?`${t} ${town}`:`${town} ${t}`;if(!used.has(town)){used.add(town);return{n,town}}}return{n:'Club '+ri(100,999),town:'Club'}}
 function freeNum(cid){const used=new Set(sqAll(cid).map(p=>p.num));for(let i=1;i<99;i++)if(!used.has(i))return i;return 99}
@@ -136,15 +136,15 @@ const youth=cid=>sqAll(cid).filter(p=>p.yth);
 const me=()=>S.clubs[S.me.cid];
 const isMe=cid=>S.me&&cid===S.me.cid;
 const AILV=[[30,'Rookie','r'],[45,'Amateur','y'],[60,'Semi-pro','y'],[72,'Professional','bl'],[84,'Elite','g'],[93,'World class','g'],[101,'Mastermind','g']];
-const coachAI=c=>{if(!c)return 35;if(c.ai==null)c.ai=cl(Math.round(c.ta*.85+((c.id*37)%21)-10),8,99);return c.ai};
+const coachAI=c=>{if(!c)return 35;if(c.ai==null)c.ai=cl(Math.round(c.ta*.85+((c.id*37)%21)-10),8,99);return Math.min(99,c.ai+(cfxOf(c).ai||0))};
 const aiLvl=c=>{const v=coachAI(c);return AILV.find(l=>v<l[0])};
 const aiChip=c=>{const[,n,k]=aiLvl(c);return `<span class="chip ${k}" title="Match AI">🧠 ${n} ${coachAI(c)}</span>`};
 const coachOf=cid=>S.clubs[cid]&&S.C[S.clubs[cid].coach];
 const boss=()=>!!(S.me&&S.me.unl.boss);
 const trustMult=cid=>isMe(cid)?(S.me.trust<35?.5:S.me.trust>75?1.1:1):1;
-const coachTa=cid=>{const co=coachOf(cid);return co?co.ta*trustMult(cid):45};
+const coachTa=cid=>{const co=coachOf(cid);return co?(co.ta+(cfxOf(co).ta||0))*trustMult(cid):45};
 const cboost=cid=>cl(Math.round((coachTa(cid)-55)/15),0,3);
-function eff(p,k,tac,cb=0){const tf=traitFx(p);let v=p[k]+(tf[k]||0);if(tac){const w=TAC[tac][ATT.indexOf(k)];v+=w>=35?2:w>=25?1:0}return v+cb}
+function eff(p,k,tac,cb=0){const tf=traitFx(p);let v=p[k]+(tf[k]||0)+(p.club?(cfx(p.club)[k]||0):0);if(tac){const w=TAC[tac][ATT.indexOf(k)];v+=w>=35?2:w>=25?1:0}return v+cb}
 function fit(p,tac,cb=0){tac=tac||'Total Football';const e=ATT.map(k=>eff(p,k,tac,cb));const o=PW[p.pos].reduce((s,w,i)=>s+w*e[i],0);if(p.pos==='GK')return Math.round(o);return Math.round(.55*o+.45*TAC[tac].reduce((s,w,i)=>s+w/100*e[i],0))}
 const fitC=(p,cid=S.me.cid)=>{const co=coachOf(cid);return fit(p,co?co.tac:null,cboost(cid))};
 const pen=(pp,sp)=>{if(pp===sp)return 0;if(pp==='GK'||sp==='GK')return 40;const d=Math.abs(PI[pp]-PI[sp]);return d===1?6:d===2?12:16};
@@ -167,7 +167,7 @@ function createWorld(){
   }});
   SQ=null;for(const c of Object.values(S.clubs)){sqAll(c.id).forEach(p=>p.num=0);sqAll(c.id).forEach(p=>p.num=freeNum(c.id))}
   for(let i=0;i<10;i++)S.pool.push(genCoach(ri(45,80)).id);
-  S.news=[];ensureAI();Object.values(S.P).forEach(p=>{if(p.gem)p.origin=p.club});
+  S.news=[];ensureAI();ensureCoaches();Object.values(S.P).forEach(p=>{if(p.gem)p.origin=p.club});
   genFixtures();cupsSetup();
 }
 function genFixtures(){
@@ -226,7 +226,7 @@ function applyMatch(f,r){
     p.sA++;p.sG+=G[p.id]||0;p.sAs+=A[p.id]||0;p.sR+=x;const ca=p.ca[cid]||(p.ca[cid]=[0,0,0]);ca[0]++;ca[1]+=G[p.id]||0;ca[2]+=A[p.id]||0;const scs=(p.sc||(p.sc={}))[cid]||(p.sc[cid]=[0,0,0,0]);scs[0]++;scs[1]+=G[p.id]||0;scs[2]+=A[p.id]||0;scs[3]+=x;
     p.mo=cl(p.mo+res[s]*2+(x>=7.5?1:0)+(isMe(cid)&&res[s]>0?BONUS[S.me.bonus].mo:0),0,100);if(tf.morale)p.mo=Math.max(p.mo,tf.morale);p.last=S.d;
     const ms=S.ms[p.id]||(S.ms[p.id]={a:0,r:0,g:0,as:0,c:cid});ms.a++;ms.r+=x;ms.g+=G[p.id]||0;ms.as+=A[p.id]||0;ms.c=cid;
-    let injr=.02*(1-(tf.inj||0)/100);const fl=S.clubs[cid].fl;injr*=isMe(cid)?(1-S.me.fac.md*.035):(1-(fl?fl.md:5)*.03);if(isMe(cid)&&homeMine)injr*=S.me.pitch.c<20?2.2:S.me.pitch.c<40?1.6:1;
+    let injr=.02*(1-(tf.inj||0)/100);const fl=S.clubs[cid].fl;injr*=isMe(cid)?(1-S.me.fac.md*.035):(1-(fl?fl.md:5)*.03);injr*=1-(cfx(cid).fit||0)/100;if(isMe(cid)&&homeMine)injr*=S.me.pitch.c<20?2.2:S.me.pitch.c<40?1.6:1;
     if(R()<injr){p.inj=ri(4,38);if(isMe(cid))mail('injury',{pid:p.id,days:p.inj})}
   })});
   r.act.forEach(a=>{const cid=a.side==='h'?f.h:f.a;if(a.k==='frenzy')sq(cid).forEach(p=>p.mo=cl(p.mo+6,0,100));if(a.k==='heal')sq(cid).forEach(p=>p.inj=0)});
@@ -249,7 +249,7 @@ const nextFixture=()=>S.fx.filter(f=>f.hs===null&&(isMe(f.h)||isMe(f.a))).sort((
 const avgOvr=cid=>{const L=pickXI(cid).xi.filter(Boolean);return Math.round(L.reduce((s,p)=>s+p.ovr,0)/(L.length||1))};
 
 /* ---------- coach trust, board, leaders ---------- */
-function trust(d,why){if(!S.me)return;S.me.trust=cl(S.me.trust+d,0,100);S.me.tlog.unshift({d:S.d,v:d,why});S.me.tlog.length=Math.min(S.me.tlog.length,14)}
+function trust(d,why){if(!S.me)return;if(d<0){const tf=cfx(S.me.cid).trust;if(tf)d*=1-tf/100}S.me.trust=cl(S.me.trust+d,0,100);S.me.tlog.unshift({d:S.d,v:d,why});S.me.tlog.length=Math.min(S.me.tlog.length,14)}
 function coachPlan(){const co=coachOf(S.me.cid);const L=pickXI(S.me.cid);const s=sq(S.me.cid);const avg=avgOvr(S.me.cid);
   const weak=[];L.xi.forEach((p,i)=>{if(p&&L.fc[p.id]-pen(p.pos,L.slots[i][0])<avg-2)weak.push(L.slots[i][0])});
   const off=s.filter(p=>!L.xi.includes(p)&&!L.bench.slice(0,5).includes(p)&&!p.gem&&(p.age>=29||p.ovr<avg-5)).sort((a,b)=>a.ovr-b.ovr);return{weak:[...new Set(weak)],off,L,avg,co}}
@@ -336,7 +336,8 @@ function randomMail(){
 function advanceDay(){
   S.d++;const o=dobj(S.d);
   if(o.m===6&&o.day===1)endSeason();
-  if(o.day===1){monthly(o);aiMonthly()}
+  if(o.day===1){monthly(o);aiMonthly();coachMonthly()}
+  huntDay();
   if(o.m===3&&o.day===1){youthIntake();aiYouth()}
   aiTransferDay();cupAdvance();
   if(o.wd===1)develop();
@@ -381,8 +382,8 @@ function develop(){
   for(const p of Object.values(S.P)){if(!p.club)continue;const c=S.clubs[p.club];const mine=p.club===S.me.cid;const tf=traitFx(p);
     let tr=mine?S.me.fac.tr:(c.fl?c.fl.tr:5);if(p.yth)tr=(tr+(mine?Math.min(20,S.me.fac.ac):(c.fl?c.fl.ac:5)))/2;
     const co=S.C[c.coach];
-    if(p.ovr<p.pot){const ageF=p.age<=23?1:p.age<=29?.85:p.age<=33?.6:.4;let g=(1.6+tr*.22)*ageF*(.8+(co?co.dv:60)/250)*(1+(tf.grow||0)/100)*(mine&&S.me.trust>75?1.1:1);p.xp=(p.xp||0)+g/52;while(p.xp>=1){p.xp-=1;if(!growStep(p,mine))break}}
-    const life=(tf.life||0)/10;if(p.age>=32+life&&R()<.03*(p.age-31-life))declineStep(p,mine);
+    if(p.ovr<p.pot){const ageF=p.age<=23?1:p.age<=29?.85:p.age<=33?.6:.4;let g=(1.6+tr*.22)*ageF*(.8+(co?co.dv+(cfxOf(co).dv||0):60)/250)*(p.age<=21?1+(cfxOf(co).yth||0)/100:1)*(1+(tf.grow||0)/100)*(mine&&S.me.trust>75?1.1:1);p.xp=(p.xp||0)+g/52;while(p.xp>=1){p.xp-=1;if(!growStep(p,mine))break}}
+    const cmo=cfxOf(co).mor;if(cmo)p.mo=Math.max(p.mo,cmo);const life=(tf.life||0)/10;if(p.age>=32+life&&R()<.03*(p.age-31-life))declineStep(p,mine);
   }
   const[ls]=leadState();if(ls==='Unhappy')sq(S.me.cid).forEach(p=>p.mo=cl(p.mo-1,0,100));else if(ls==='Happy')sq(S.me.cid).forEach(p=>p.mo=cl(p.mo+.5,0,100));
   if(S.me.trust<35&&!boss())sq(S.me.cid).forEach(p=>p.mo=cl(p.mo-.7,0,100));
@@ -410,13 +411,13 @@ function endSeason(){
     rec.lgs.push({lg,champ:tb[0].c,champName:ch.name,ts:ts?{name:ts.name,club:ts.club,g:ts.sG}:null,pots:pots?{name:pots.name,club:pots.club,avg:(pots.sR/pots.sA).toFixed(2)}:null});
   });
   const orbW=rec.orb[0];if(orbW&&S.P[orbW.id]){S.P[orbW.id].aw.push(`Golden Orb ${seasonLbl(s)}`);S.clubs[orbW.club].rep=cl(S.clubs[orbW.club].rep+2,0,99)}
-  rec.cups=S.cups?Object.values(S.cups).filter(C=>C.winner).map(C=>{const fin=C.rounds.at(-1).ties[0];return{id:C.id,w:C.winner,ru:fin.w===fin.h?fin.a:fin.h,sc:`${fin.hs}-${fin.as}${fin.pens?` (${fin.pens.join('-')} pens)`:''}`}}):[];S.seasons.push(rec);careerClose(s);aiSeasonReview();
+  rec.cups=S.cups?Object.values(S.cups).filter(C=>C.winner).map(C=>{const fin=C.rounds.at(-1).ties[0];return{id:C.id,w:C.winner,ru:fin.w===fin.h?fin.a:fin.h,sc:`${fin.hs}-${fin.as}${fin.pens?` (${fin.pens.join('-')} pens)`:''}`}}):[];S.seasons.push(rec);careerClose(s);aiSeasonReview();coachSeason(s);
   const pos=table(myLg).findIndex(r=>r.c===S.me.cid)+1;
   mv.forEach(([id,lg])=>{const cc=S.clubs[id];cc.lg=lg;cc.t=LEAGUES[lg].tier});
   const hit=pos<=exp.tgt;c.fans=S.me.unl.fanlock?100:cl(c.fans+(hit?8:-10),0,100);c.rep=cl(c.rep+(hit?2:-2),0,99);S.me.board=cl(S.me.board+(hit?10:-12),0,100);S.me.seeds+=25;
   for(const p of Object.values(S.P)){p.age++;if(p.club===S.me.cid&&!p.yth&&p.sA)p.seasons=(p.seasons||0)+1;p.sA=p.sG=p.sAs=p.sR=p.sY=p.sRd=0;p.ban=0;
     const life=(traitFx(p).life||0)/10;
-    if(p.age>=33+life&&R()<(p.age-32-life)*.2){const ca=p.ca[S.me.cid];if(ca&&ca[0]>=10)S.retired.push({name:p.name,pos:p.pos,apps:ca[0],g:ca[1],as:ca[2],peak:p.ovr,ret:s,aw:p.aw,tr:p.tr,hist:p.hist});if(p.club===S.me.cid)S.me.log.push({s,d:S.d,txt:`${p.name} retired`});delete S.P[p.id];S.me.short=S.me.short.filter(x=>x!==p.id);S.me.force=S.me.force.filter(x=>x!==p.id);continue}
+    if(p.age>=33+life&&R()<(p.age-32-life)*.2){const ca=p.ca[S.me.cid];exCoach(p);if(ca&&ca[0]>=10)S.retired.push({name:p.name,pos:p.pos,apps:ca[0],g:ca[1],as:ca[2],peak:p.ovr,ret:s,aw:p.aw,tr:p.tr,hist:p.hist});if(p.club===S.me.cid)S.me.log.push({s,d:S.d,txt:`${p.name} retired`});delete S.P[p.id];S.me.short=S.me.short.filter(x=>x!==p.id);S.me.force=S.me.force.filter(x=>x!==p.id);continue}
     if(p.yth&&p.age>=19)p.yth=false;setVal(p)}
   for(const id in S.P){const p=S.P[id];if(!p.club&&!S.me.short.includes(p.id))delete S.P[id]}
   SQ=null;for(const cc of Object.values(S.clubs))if(cc.id!==S.me.cid){refill(cc.id);if(R()<.5&&!sqAll(cc.id).some(p=>p.gem&&p.age<=21))genGem(cc.id,cc.t,cc.fl?cc.fl.ac:5)}SQ=null;
@@ -434,6 +435,6 @@ const fuseChance=(t,seeds,copy)=>Math.min(.95,(1-Math.pow(1-SEEDP[t],seeds))*(co
 
 /* ---------- save ---------- */
 function save(){try{const j=JSON.stringify(S);localStorage.setItem(SKEY,window.LZString?'z'+LZString.compressToUTF16(j):'j'+j)}catch(e){console.warn('save failed',e)}}
-function load(){try{const s=localStorage.getItem(SKEY);if(s){S=JSON.parse(s[0]==='z'?LZString.decompressFromUTF16(s.slice(1)):s.slice(1));SQ=null;ensureAI();if(!S.news)S.news=[];if(!S.cups)cupsSetup();return true}}catch(e){}return false}
+function load(){try{const s=localStorage.getItem(SKEY);if(s){S=JSON.parse(s[0]==='z'?LZString.decompressFromUTF16(s.slice(1)):s.slice(1));SQ=null;ensureAI();ensureCoaches();if(!S.news)S.news=[];if(!S.cups)cupsSetup();return true}}catch(e){}return false}
 const exportSave=()=>{const j=JSON.stringify(S);return window.LZString?'LFF3:'+LZString.compressToBase64(j):j};
 const importSave=t=>{t=t.trim();return JSON.parse(t.startsWith('LFF3:')?LZString.decompressFromBase64(t.slice(5)):t)};

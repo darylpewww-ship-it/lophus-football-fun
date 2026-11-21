@@ -34,6 +34,7 @@ function runEngine(f,detail){
   const M={planLines:[],added1:()=>Math.min(300,60+M.stops1*12),added2:()=>Math.min(420,90+(M.stops-M.stops1)*12),stops1:0,t:0,half:1,tl:[],detail,ref,mom:0,lastLine:-999,story:[],ev:[],cards:[],act:[],mp:[],subs:[],rt:{},minute:0,addedSeen:0,stops:0,poss:{h:0,a:0},heat:[],lastGoal:null};
   const H=mkSide(M,f.h,'h'),A=mkSide(M,f.a,'a');H.opp=A;A.opp=H;M.H=H;M.A=A;
   [H,A].forEach(sd=>sd.on.forEach(u=>{for(const id of u.p.tr){const s=SK[id];if(s&&s.act&&R()<s.act.ch)M.act.push({side:sd.k,pid:u.p.id,sid:id,k:s.act.k,m:ri(5,85),done:false})}}));
+  [[H,f.h],[A,f.a]].forEach(([sd,cid])=>{const co=coachOf(cid);if(co&&co.tr)for(const id of co.tr){const s=SK[id];if(s&&s.act&&R()<s.act.ch)M.act.push({side:sd.k,cid:co.id,sid:id,k:s.act.k,m:ri(5,85),done:false})}});
   M.home=H;H.homeAdv=homeAdv(f.h);gamePlan(M,H,A);gamePlan(M,A,H);
   if(detail){preMatchLines(M,H,A);M.planLines.forEach(t=>line(M,t,'n'))}
   let cur={sd:H,z:.5,x:.5,phase:'kick'};
@@ -42,7 +43,7 @@ function runEngine(f,detail){
     tickMinute(M);
     const r=possession(M,cur.sd,cur.z,cur.x,cur.phase);cur=r;
     if(M.half===1&&M.t>=half1+M.added1()){M.stops1=M.stops;M.half=2;const lab=`45+${Math.max(1,Math.round((M.t-half1)/60))}`;M.t=half1;if(detail){htLines(M);log(M,'ht',{});}htAdjust(M,H);htAdjust(M,A);cur={sd:A,z:.5,x:.5,phase:'kick'};[H,A].forEach(sd=>sd.on.forEach(u=>u.fat=Math.max(0,u.fat-.08)))}
-    else if(M.half===2&&M.t>=half2+M.added2()){break}
+    else if(M.half===2&&M.t>=half2+M.added2()){if(!M.mirDone){M.mirDone=1;let hit=0;[H,A].forEach(sd=>{if(sd.miracle&&sd.g<=sd.opp.g){hit=1;if(detail)line(M,`🌟 A miracle in stoppage time for ${clubN(sd)}!`,'g');cur=goal(M,sd,actor(sd,.9),null,'shot','foot',.5,.5)}});if(hit)continue}break}
     if(M.t>9000)break;
   }
   if(detail){ftLines(M);log(M,'ft',{})}
@@ -94,9 +95,9 @@ function tickMinute(M){const m=Math.floor(M.t/60);if(m===M.minute)return;const s
           log(M,'sub',{s:sd.k,off:off.p.id,on:on.id});if(M.detail)line(M,pick([`Change for ${clubN(sd)}: ${on.name} replaces ${off.p.name}${off.fat>.45?', who is out on his feet':''}.`,`${clubN(sd)} make a change: ${last(off.p.name)} off, ${on.name} on${sd.ment==='chase'||sd.ment==='desperate'?' to chase the game':''}.`,`Fresh legs for ${clubN(sd)}: ${on.name} comes on for ${last(off.p.name)}.`]),'s')}}}
   });
   // God skills fire at their minute
-  M.act.forEach(a=>{if(a.done||M.t/60<a.m)return;a.done=true;const sd=a.side==='h'?M.H:M.A;if(!live(sd).some(u=>u.p.id===a.pid))return;a.fired=true;const s=SK[a.sid];
-    if(a.k==='tempo'){sd.boost+=6;sd._r=null}if(a.k==='strike')sd.xgMul*=1.6;if(a.k==='aegis')sd.opp.xgMul*=.55;
-    log(M,'skill',{s:sd.k,pid:a.pid,sid:a.sid});if(M.detail)line(M,`✨ ${S.P[a.pid]?.name} channels ${s.n}: ${s.act.d}!`,'g')});
+  M.act.forEach(a=>{if(a.done||M.t/60<a.m)return;a.done=true;const sd=a.side==='h'?M.H:M.A;if(!a.cid&&!live(sd).some(u=>u.p.id===a.pid))return;a.fired=true;const s=SK[a.sid];
+    if(a.k==='tempo'){sd.boost+=6;sd._r=null}if(a.k==='strike')sd.xgMul*=1.6;if(a.k==='aegis')sd.opp.xgMul*=.55;if(a.k==='miracle')sd.miracle=true;
+    log(M,'skill',{s:sd.k,pid:a.pid,cid:a.cid,sid:a.sid});if(M.detail)line(M,`✨ ${a.cid?'Coach '+S.C[a.cid]?.name:S.P[a.pid]?.name} channels ${s.n}: ${s.act.d}!`,'g')});
   // narrative pulse
   if(M.detail&&M.t-M.lastLine>420)narrPulse(M);
 }
@@ -314,7 +315,7 @@ function ftLines(M){const H=M.H,A=M.A;const pt=M.poss.h+M.poss.a||1;const ph=Mat
 
 function buildResult(M,f){const H=M.H,A=M.A;const pt=M.poss.h+M.poss.a||1;
   const apps=sd=>sd.on.map(u=>u.p);
-  return{Lh:H.L,La:A.L,gh:H.g,ga:A.g,ev:M.ev,cards:M.cards,act:M.act.filter(a=>a.fired).map(a=>({side:a.side,pid:a.pid,sid:a.sid,k:a.k,m:a.m})),mp:M.mp,poss:Math.round(M.poss.h/pt*100),shH:H.st.shots,shA:A.st.shots,sh:H.str,sa:A.str,
+  return{Lh:H.L,La:A.L,gh:H.g,ga:A.g,ev:M.ev,cards:M.cards,act:M.act.filter(a=>a.fired).map(a=>({side:a.side,pid:a.pid,cid:a.cid,sid:a.sid,k:a.k,m:a.m})),mp:M.mp,poss:Math.round(M.poss.h/pt*100),shH:H.st.shots,shA:A.st.shots,sh:H.str,sa:A.str,
     st:{h:H.st,a:A.st},subs:M.subs,apps:{h:apps(H),a:apps(A)},rtd:M.rt,ref:M.ref,tl:M.detail?M.tl:null}}
 
 /* ---- coach match AI ---- */

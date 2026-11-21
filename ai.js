@@ -45,7 +45,7 @@ function aiSeasonReview(){for(const c of Object.values(S.clubs)){if(isMe(c.id))c
   const ys=youth(c.id).sort((a,b)=>b.pot-a.pot);ys.slice(8).forEach(p=>{p.club=0;moveRec(p,c.id,0,0,'released')});SQ=null;
   // judge the coach
   const h=c.hist[c.hist.length-1];if(!h)continue;const n=LEAGUES[h.lg].size;const[,,tgt]=statusOf(c);const co=S.C[c.coach];
-  if(co&&h.pos>tgt+Math.round(n/4)&&R()<.6){const pool=S.pool.map(id=>S.C[id]).filter(x=>x&&!x.club).sort((a,b)=>(coachAI(b)+b.ta)-(coachAI(a)+a.ta));const pickN=c.big?pool[0]:pool[Math.min(pool.length-1,ri(1,4))];if(pickN){co.club=0;S.pool.push(co.id);pickN.club=c.id;c.coach=pickN.id;S.pool=S.pool.filter(x=>x!==pickN.id);news('coach',`${c.name} sack ${co.name} after finishing ${ord(h.pos)}. ${pickN.name} (${aiLvl(pickN)[1]}) takes over.`,[c.id])}}}}
+  if(co&&h.pos>tgt+Math.round(n/4)&&R()<.6){const pool=S.pool.map(id=>S.C[id]).filter(x=>x&&!x.club).sort((a,b)=>(coachAI(b)+b.ta)-(coachAI(a)+a.ta));const pickN=c.big?pool[0]:pool[Math.min(pool.length-1,ri(1,4))];if(pickN){co.club=0;S.pool.push(co.id);pickN.club=c.id;pickN.ctr=ri(18,36);c.coach=pickN.id;S.pool=S.pool.filter(x=>x!==pickN.id);news('coach',`${c.name} sack ${co.name} after finishing ${ord(h.pos)}. ${pickN.name} (${aiLvl(pickN)[1]}) takes over.`,[c.id])}}}}
 /* careers: one row per club per season */
 function careerClose(s){const champs={},promo={};S.seasons.at(-1)?.lgs.forEach(l=>champs[l.champ]=LEAGUES[l.lg].n);
   for(const c of Object.values(S.clubs)){const h=c.hist[c.hist.length-1];if(h&&h.s===s&&LEAGUES[h.lg].nat==='en'&&LEAGUES[h.lg].tier>1&&h.pos<=3&&h.pos>1)promo[c.id]=LEAGUES[h.lg].n}
