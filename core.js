@@ -24,8 +24,8 @@ const PRE=['Ash','Brack','Cald','Dun','Elm','Fen','Gal','Har','Ivy','Kel','Lark'
 const SUF=['ford','ley','bridge','ham','well','mouth','field','worth','stead','by','ton','gate','mere','combe','hurst','dale','port','borough','wich','burn','holme','cliffe'];
 const TYPES=['Town','United','City','Rovers','Athletic','Albion','Wanderers','FC','Borough','Harriers','County','Dynamo','Sporting'];
 const NATS={en:'England',es:'Spain',de:'Germany',it:'Italy',pt:'Portugal',nl:'Netherlands'};
-const LEAGUES=[{nat:'en',tier:1,n:'Crown League',size:20,q:75,big:6},{nat:'en',tier:2,n:'Sovereign Division',size:24,q:67},{nat:'en',tier:3,n:'Division One',size:24,q:59},{nat:'en',tier:4,n:'Division Two',size:24,q:51},{nat:'en',tier:5,n:'Counties League',size:24,q:44},
- {nat:'es',tier:1,n:'Primera Corona',size:20,q:73,big:3},{nat:'de',tier:1,n:'Meisterliga',size:18,q:71,big:2},{nat:'it',tier:1,n:'Lega Suprema',size:20,q:72,big:3},{nat:'pt',tier:1,n:'Liga Lusitana',size:18,q:66,big:3},{nat:'nl',tier:1,n:'Kroondivisie',size:18,q:65,big:3}];
+const LEAGUES=[{nat:'en',tier:1,n:'Crown League',size:20,q:68,big:6},{nat:'en',tier:2,n:'Sovereign Division',size:24,q:62},{nat:'en',tier:3,n:'Division One',size:24,q:56},{nat:'en',tier:4,n:'Division Two',size:24,q:50},{nat:'en',tier:5,n:'Counties League',size:24,q:44},
+ {nat:'es',tier:1,n:'Primera Corona',size:20,q:67,big:3},{nat:'de',tier:1,n:'Meisterliga',size:18,q:65,big:2},{nat:'it',tier:1,n:'Lega Suprema',size:20,q:66,big:3},{nat:'pt',tier:1,n:'Liga Lusitana',size:18,q:60,big:3},{nat:'nl',tier:1,n:'Kroondivisie',size:18,q:59,big:3}];
 const LG=LEAGUES.slice(0,5).map(l=>l.n);
 const lgName=c=>LEAGUES[c.lg].n;const lq=c=>LEAGUES[c.lg].q;const lgOf=c=>LEAGUES[c.lg];
 const CLUBGEN={
@@ -99,7 +99,12 @@ const inWindow=()=>{const m=dobj(S.d).m;return m===6||m===7||m===0};
 function nat(){let r=R()*100;for(const[k,w]of NATW){if((r-=w)<0)return k}return'en'}
 const pname=(n=nat())=>pick(FN[n])+' '+pick(LN[n]);
 const calcOvr=(p,src=p)=>{const w=PW[p.pos];return Math.round(ATT.reduce((s,k,i)=>s+w[i]*src[k],0))};
-function setVal(p){const af=p.age<=21?1.5:p.age<=24?1.3:p.age<=28?1.1:p.age<=31?.75:p.age<=33?.45:.25;const tb=p.tr&&p.tr.length?1+(9-bestTier(p))*.06:1;p.val=Math.max(3000,Math.round((1500*Math.pow(1.19,cl(p.ovr-35,0,65))*af+Math.max(0,p.pot-p.ovr)*3000*(p.age<=23?1:.3))*tb/1000)*1000);p.wage=Math.round((p.val*.011+500)/100)*100}
+// OVR scale: base by tier 68/62/56/50/44, age modifier, ±4 noise, soft cap 32–78 at creation
+function genOVR(q,age){const ageMod=age<23?-4:age>32?-6:0;return cl(Math.round(q+ageMod+(R()-.5)*8),32,78)}
+const econOvr=o=>o>44?44+(o-44)*1.29:o;
+function rescaleWorld(){const m=o=>o>44?Math.round(44+(o-44)/1.29):o;for(const p of Object.values(S.P)){const d=m(p.ovr)-p.ovr;if(!d)continue;ATT.forEach(k=>{p[k]=cl(p[k]+d,10,99);if(p.cap)p.cap[k]=cl(p.cap[k]+d,p[k],99)});p.ovr=calcOvr(p);p.pot=Math.max(p.ovr,calcOvr(p,p.cap));setVal(p)}
+  for(const c of Object.values(S.C))['ta','dv','mm'].forEach(k=>c[k]=cl(m(c[k]),20,97));S.scale=2;SQ=null}
+function setVal(p){const af=p.age<=21?1.5:p.age<=24?1.3:p.age<=28?1.1:p.age<=31?.75:p.age<=33?.45:.25;const tb=p.tr&&p.tr.length?1+(9-bestTier(p))*.06:1;p.val=Math.max(3000,Math.round((1500*Math.pow(1.19,cl(econOvr(p.ovr)-35,0,65))*af+Math.max(0,p.pot-p.ovr)*3000*(p.age<=23?1:.3))*tb/1000)*1000);p.wage=Math.round((p.val*.011+500)/100)*100}
 function setCaps(p,gap,sig){p.cap={};ATT.forEach(k=>p.cap[k]=cl(p[k]+gap+ri(-4,4)+(k===sig?ri(0,5):0),p[k],99));p.pot=Math.max(p.ovr,calcOvr(p,p.cap))}
 function genPlayer(pos,target,age,club=0,potBoost=0,emph=null){
   const cn=club&&S.clubs[club]?S.clubs[club].nat:null;const n=cn&&R()<.6&&FN[cn]?cn:nat();const p={id:++S.nid,name:pname(n),nat:n,pos,age,club,mo:ri(58,74),inj:0,ban:0,xp:R(),sA:0,sG:0,sAs:0,sR:0,sY:0,sRd:0,ca:{},aw:[],num:0,last:-99,tr:[]};
@@ -109,7 +114,7 @@ function genPlayer(pos,target,age,club=0,potBoost=0,emph=null){
   p.ovr=calcOvr(p);
   const g=age<=17?ri(14,32):age<=19?ri(10,24):age<=21?ri(6,16):age<=24?ri(2,9):age<=27?ri(0,4):0;
   setCaps(p,g+potBoost,sig);rollTraits(p);setVal(p);S.P[p.id]=p;return p;}
-function genGem(club,t,youthLvl){const pos=pick(['DF','MF','AM','ST','ST','AM','GK']);const age=ri(16,18);const lowTarget=cl(Math.round(32+youthLvl*1.2+(5-t)*2+ri(-4,5)),30,60);const p=genPlayer(pos,lowTarget,age,club);const want=ri(90,97);
+function genGem(club,t,youthLvl){const pos=pick(['DF','MF','AM','ST','ST','AM','GK']);const age=ri(16,18);const lowTarget=Math.min(cl(Math.round(32+youthLvl*1.2+(5-t)*2+ri(-4,5)),30,60),Math.max(30,(S.clubs[club]?lq(S.clubs[club]):50)-8));const p=genPlayer(pos,lowTarget,age,club);const want=ri(90,97);
   for(let k=0;k<40&&p.pot<want;k++){const a=pick(ATT);if(p.cap[a]<99)p.cap[a]++;p.pot=calcOvr(p,p.cap)}
   p.gem=true;rollTraits(p,.35);setVal(p);return p}
 function genCoach(q,club=0){const cn=club&&S.clubs[club]?S.clubs[club].nat:null;const n=cn&&R()<.7&&FN[cn]?cn:nat();const c={id:++S.nid,name:pname(n),nat:n,age:ri(36,64),tac:pick(Object.keys(TAC)),form:pick(Object.keys(FORMS)),ta:cl(Math.round(q+nrm()*9),25,97),dv:cl(Math.round(q+nrm()*9),25,97),mm:cl(Math.round(q+nrm()*9),25,97),club,aw:[]};c.ai=cl(Math.round(c.ta*.6+q*.25+nrm()*12+5),8,99);c.wage=Math.round((Math.max(0,c.ta+c.dv+c.mm-120)*230+2500)/100)*100;c.ctr=club?ri(12,36):0;c.tr=[];c.hist=[];if(typeof rollCoachTraits==='function')rollCoachTraits(c);S.C[c.id]=c;return c}
@@ -151,7 +156,7 @@ const pen=(pp,sp)=>{if(pp===sp)return 0;if(pp==='GK'||sp==='GK')return 40;const 
 
 /* ---------- world ---------- */
 function createWorld(){
-  S={v:3,nid:0,title:'Lophus Football Fun',season:2027,d:0,clubs:{},P:{},C:{},fx:[],mail:[],pend:[],ms:{},mp:{},mg:{},aw:[],seasons:[],retired:[],pool:[],rep:[],tr:{inc:[],out:[],hist:[]},me:null,ui:{pg:'home',tab:{}},rec:{}};SQ=null;
+  S={v:3,scale:2,nid:0,title:'Lophus Football Fun',season:2027,d:0,clubs:{},P:{},C:{},fx:[],mail:[],pend:[],ms:{},mp:{},mg:{},aw:[],seasons:[],retired:[],pool:[],rep:[],tr:{inc:[],out:[],hist:[]},me:null,ui:{pg:'home',tab:{}},rec:{}};SQ=null;
   const used=new Set();
   LEAGUES.forEach((L,lg)=>{for(let i=0;i<L.size;i++){
     let g;for(let k=0;k<300;k++){g=CLUBGEN[L.nat]();if(!used.has(g.town)){used.add(g.town);break}}
@@ -162,7 +167,7 @@ function createWorld(){
     const fl=[15,11,8,5,3][et-1];c.fl={tr:cl(Math.round(fl+nrm()*2.2+(big?4:0)),1,20),ac:cl(Math.round(fl+nrm()*2.2+(big?4:0)),1,20),md:cl(Math.round(fl+nrm()*2),1,20)};
     S.clubs[c.id]=c;const q=L.q+ri(-5,5)+(big?ri(5,9):0);
     const co=genCoach(q-3+(big?6:0),c.id);c.coach=co.id;
-    for(const pos of POSL)for(let k=0;k<NEED[pos];k++)genPlayer(pos,q+Math.round(nrm()*4),ri(18,33),c.id);
+    for(const pos of POSL)for(let k=0;k<NEED[pos];k++){const age=ri(18,33);genPlayer(pos,genOVR(q,age),age,c.id)}
     genGem(c.id,et,c.fl.ac);
   }});
   SQ=null;for(const c of Object.values(S.clubs)){sqAll(c.id).forEach(p=>p.num=0);sqAll(c.id).forEach(p=>p.num=freeNum(c.id))}
@@ -246,7 +251,7 @@ function applyMatch(f,r){
 function simOthersToday(){cupAdvance();for(const f of S.fx)if(f.d===S.d&&f.hs===null&&!isMe(f.h)&&!isMe(f.a))applyMatch(f,simMatch(f))}
 const myFixtureToday=()=>S.fx.find(f=>f.d===S.d&&f.hs===null&&(isMe(f.h)||isMe(f.a)));
 const nextFixture=()=>S.fx.filter(f=>f.hs===null&&(isMe(f.h)||isMe(f.a))).sort((a,b)=>a.d-b.d)[0];
-const avgOvr=cid=>{const L=pickXI(cid).xi.filter(Boolean);return Math.round(L.reduce((s,p)=>s+p.ovr,0)/(L.length||1))};
+const avgOvr=cid=>{const L=sq(cid).map(p=>p.ovr).sort((a,b)=>b-a).slice(0,12);return Math.round(L.reduce((s,v)=>s+v,0)/(L.length||1))};
 
 /* ---------- coach trust, board, leaders ---------- */
 function trust(d,why){if(!S.me)return;if(d<0){const tf=cfx(S.me.cid).trust;if(tf)d*=1-tf/100}S.me.trust=cl(S.me.trust+d,0,100);S.me.tlog.unshift({d:S.d,v:d,why});S.me.tlog.length=Math.min(S.me.tlog.length,14)}
