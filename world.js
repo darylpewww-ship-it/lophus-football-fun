@@ -104,7 +104,7 @@ if(TMP&&(!S||!S.me))startScreen();
 
 /* ---------- two-tier rule: nobody drops more than two levels, unless you own Final Say ---------- */
 const clubLvl=c=>{const L=LEAGUES[c.lg];return L.nat==='en'?L.tier:(L.q>=65?1:2)};
-const plLvl=p=>p.ovr>=71?1:p.ovr>=65?2:p.ovr>=59?3:p.ovr>=53?4:5;
+const plLvl=p=>p.ovr>=71?1:p.ovr>=65?2:p.ovr>=59?3:p.ovr>=40?4:5;
 const coLvl=co=>{const r=cRating(co);return r>=80?1:r>=72?2:r>=64?3:r>=58?4:5};
 const gapTo=(lvl,c)=>clubLvl(c)-lvl;const LVN=['','Crown League','Sovereign Division','Division One','Division Two','Counties League'];
 const outOfReach=(lvl,c)=>!boss()&&gapTo(lvl,c)>2;
