@@ -101,3 +101,22 @@ A.readm=id=>{closeModal();_openMail(+id)};
 A.reroll=()=>{const u=TMP.ui;TMP=null;startScreen();Object.assign(TMP.ui,{mgr:u.mgr,av:u.av,st:u.st,step:4,club:null});startScreen()};
 const _ensureDyn2=ensureDyn;ensureDyn=function(){_ensureDyn2();if(!S.gemv2){ensureGems();S.gemv2=1}ensureCoachTiers()};
 if(TMP&&(!S||!S.me))startScreen();
+
+/* ---------- two-tier rule: nobody drops more than two levels, unless you own Final Say ---------- */
+const clubLvl=c=>{const L=LEAGUES[c.lg];return L.nat==='en'?L.tier:(L.q>=65?1:2)};
+const plLvl=p=>p.ovr>=71?1:p.ovr>=65?2:p.ovr>=59?3:p.ovr>=53?4:5;
+const coLvl=co=>{const r=cRating(co);return r>=80?1:r>=72?2:r>=64?3:r>=58?4:5};
+const gapTo=(lvl,c)=>clubLvl(c)-lvl;const LVN=['','Crown League','Sovereign Division','Division One','Division Two','Counties League'];
+const outOfReach=(lvl,c)=>!boss()&&gapTo(lvl,c)>2;
+const reachMsg=(name,lvl)=>`${name} is a ${LVN[lvl]}-level ${lvl===1?'talent':'name'} and won't drop more than two tiers to join ${me().name}. Win promotion first, or get Final Say in the Store.`;
+const _interest3=interest;interest=function(p){if(p.club!==S.me.cid&&outOfReach(plLvl(p),me()))return 0;return _interest3(p)};
+const _ifor=interestFor;interestFor=function(p,c){if(p.club!==c.id&&gapTo(plLvl(p),c)>2)return 0;return _ifor(p,c)};
+const _mo=makeOffer;makeOffer=function(p,fee){if(p.club!==S.me.cid&&outOfReach(plLvl(p),me()))return reachMsg(p.name,plLvl(p));return _mo(p,fee)};
+const _sf=signFree;signFree=function(p){if(outOfReach(plLvl(p),me()))return reachMsg(p.name,plLvl(p));return _sf(p)};
+const _at=approachTerms;approachTerms=function(c){const t=_at(c);if(outOfReach(coLvl(c),me()))t.int=0;return t};
+const _happ=A.happ;A.happ=id=>{const c=S.C[+id];if(c&&outOfReach(coLvl(c),me()))return modal(`<div style="text-align:center"><div style="font-size:46px">🚫</div><h2>Not interested</h2><p class="sm">${esc(reachMsg(c.name,coLvl(c)))}</p><button class="btn" data-a="close">OK</button></div>`);return _happ(id)};
+const _ahc=aiHireCoach;aiHireCoach=function(c){const keep=S.pool;S.pool=S.pool.filter(id=>S.C[id]&&gapTo(coLvl(S.C[id]),c)<=2);if(!S.pool.length)S.pool=keep;const co=_ahc(c);S.pool=keep.filter(x=>x!==co.id);return co};
+const reachChip=(lvl)=>outOfReach(lvl,me())?`<div class="chip r" style="margin:8px 0">🚫 Won't drop to your level · needs ${LVN[Math.max(1,lvl+2)]} or higher</div>`:'';
+const _ss=scoutSheet;scoutSheet=function(id){_ss(id);const p=S.P[id];const r=pRange(p,p.ovr);if(r&&p.club!==S.me.cid){const el=$('#sheet .stabs');if(el)el.insertAdjacentHTML('beforebegin',reachChip(plLvl({ovr:r[1]})))}};
+const _cs2=coachSheet;coachSheet=function(id){_cs2(id);const c=S.C[id];if(c&&!isMe(c.club)){const el=$('#sheet .grid3');if(el)el.insertAdjacentHTML('beforebegin',reachChip(coLvl(c)))}};
+const _ps=playerSheet;playerSheet=function(id){_ps(id);const p=S.P[id];if(p&&p.club!==S.me.cid&&outOfReach(plLvl(p),me())){const sh=$('#sheet');if(sh&&sh.firstElementChild)sh.firstElementChild.insertAdjacentHTML('afterend',reachChip(plLvl(p)))}};
