@@ -325,7 +325,7 @@ async function runDays(mode){if(RUN)return;RUN={stop:false,lines:[]};RUNMODE=nul
     await sleep(mode==='cont'?110:26);
   }
   RUN=null;closeModal();save();
-  if(reason==='match'){go('match')}else if(reason==='mail'||reason==='season'){if(reason==='mail')RUNMODE=mode;const m=S.mail.find(m=>!m.done)||S.mail[0];render();if(m)openMail(m.id)}else render();}
+  if(reason==='match'){go('match')}else if(reason==='mail'||reason==='season'){if(reason==='mail')RUNMODE=mode;const m=S.mail.find(m=>!m.done)||S.mail[0];render();if(m){if(reason==='mail')S._fromRun=true;openMail(m.id)}}else render();}
 function skipSeason(){const s=S.season;let g=0;while(S.season===s&&g++<400){const f=myFixtureToday();if(f)applyMatch(f,simMatch(f));simOthersToday();advanceDay()}S._seasonEnd=false;save();go('home');toast('Season complete. Check your mail for the review.')}
 
 /* ---------- start screen ---------- */
