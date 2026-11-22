@@ -120,3 +120,29 @@ const reachChip=(lvl)=>outOfReach(lvl,me())?`<div class="chip r" style="margin:8
 const _ss=scoutSheet;scoutSheet=function(id){_ss(id);const p=S.P[id];const r=pRange(p,p.ovr);if(r&&p.club!==S.me.cid){const el=$('#sheet .stabs');if(el)el.insertAdjacentHTML('beforebegin',reachChip(plLvl({ovr:r[1]})))}};
 const _cs2=coachSheet;coachSheet=function(id){_cs2(id);const c=S.C[id];if(c&&!isMe(c.club)){const el=$('#sheet .grid3');if(el)el.insertAdjacentHTML('beforebegin',reachChip(coLvl(c)))}};
 const _ps=playerSheet;playerSheet=function(id){_ps(id);const p=S.P[id];if(p&&p.club!==S.me.cid&&outOfReach(plLvl(p),me())){const sh=$('#sheet');if(sh&&sh.firstElementChild)sh.firstElementChild.insertAdjacentHTML('afterend',reachChip(plLvl(p)))}};
+
+/* ---------- coach spread v2: wider, like a real league (top flight ~62–92, most 68–84) ---------- */
+CTB[1]={min:62,max:92,avg:76};CTB[2]={min:56,max:84,avg:68};CTB[3]={min:48,max:76,avg:60};CTB[4]={min:42,max:70,avg:54};CTB[5]={min:36,max:64,avg:48};
+coachBand=function(lg){const L=LEAGUES[lg];return L.nat==='en'?CTB[L.tier]:{min:L.q-9,max:L.q+21,avg:L.q+5}};
+coachTarget=function(lg,big){const b=coachBand(lg);return cl(Math.round(b.avg+(R()+R()+R()+R()-2)*8+(big?ri(3,8):0)),b.min,b.max)};
+const _ect=ensureCoachTiers;ensureCoachTiers=function(){if(S&&S.ctier===1)S.ctier=0;if(S&&!S.ctier){_ect();S.ctier=2}};
+
+/* ---------- compact coach card, like the reference ---------- */
+const coachFull=coachSheet;
+coachSheet=function(id){const c=S.C[id];if(!c)return;if(isMe(c.club))return coachFull(id);const club=c.club?S.clubs[c.club]:null;const T=approachTerms(c);const v=cRating(c);const r=rng(c,v);const yr=Math.floor(c.ctr/12),mo=c.ctr%12;
+  const pos=club?(()=>{const t=table(club.lg);const i=t.findIndex(x=>x.id===club.id)+1;const[,,tgt]=statusOf(club);return i&&i>tgt+4?['Under pressure','r']:['Settled','g']})():['Free agent','g'];
+  const note=outOfReach(coLvl(c),me())?`Won't drop to your level: he needs a ${LVN[Math.max(1,coLvl(c)+2)]} club or higher.`:S.me.hunt&&S.me.hunt.refused.includes(c.id)?'He has already said no.':T.int>=.7?'Keen to talk. A call could get this done.':T.int>=.4?'Could be tempted by the right project.':club&&club.rep>me().rep?'Unlikely to be tempted; his club is bigger than yours.':'Unlikely to be tempted right now.';
+  const bar=(k,l)=>{const e=k==='ai'?coachAI(c):cEff(c,k);const rr=rng(c,e);return `<div class="cbar" data-tip="cst:${k}:${c.id}"><div class="row"><span class="b sm">${l}</span><b class="sp disp" style="font-size:22px">${rr?`${rr[0]}-${rr[1]}`:e}</b></div><div class="seg g"><i style="width:${rr?(rr[0]+rr[1])/2:e}%"></i></div></div>`};
+  modal(`<div class="grab"></div><div class="row" style="gap:12px;align-items:center">${hexBadge(c,62)}<div style="flex:1;min-width:0"><div class="lbl caps">Manager</div><h2 class="ell" style="margin:0">${esc(c.name)}</h2><div class="sm mut">Age ${c.age} · ${money(c.wage)}/mo</div></div><span class="disp" style="font-size:40px;color:var(--grn);white-space:nowrap">${r?`${r[0]}-${r[1]}`:v}</span></div>
+  <div class="chips2"><span class="chip">${club?esc(club.name):'Free agent'}</span><span class="chip g">${esc(c.form)}</span><span class="chip">${esc(c.tac)}</span>${c.club?`<span class="chip g">${yr}yr ${mo}mo left</span>`:''}<span class="chip ${pos[1]}">${pos[0]}</span>${T.comp?`<span class="chip y">${money(T.comp)} fee</span>`:''}</div>
+  <div class="hr"></div>${bar('ta','Tactical Knowledge')}${bar('dv','Development')}${bar('mm','Man Management')}
+  ${c.tr.length?`<div style="margin:10px 0 4px">${c.tr.slice().sort((a,b)=>tierOf(a)-tierOf(b)).map(i=>skPill(i)).join(' ')}</div>`:''}
+  <div class="cnote">${note}</div><button class="btn bigg wide" data-a="cact:${c.id}">Actions</button>`)}
+function coachActions(id){const c=S.C[id];const h=S.me.hunt;const on=h&&h.short.includes(c.id);const ok=h&&h.ok&&h.ok[c.id];
+  modal(`<div class="grab"></div><div class="row" style="gap:12px;margin-bottom:12px">${hexBadge(c,44)}<div><div class="lbl caps">Manager actions</div><b>${esc(c.name)}</b></div></div>
+  ${ok?`<button class="mv sel" data-a="happt:${c.id}"><span class="mvi">✍️</span><span class="mvt"><b>Appoint him</b><span>He is interested: sign him now</span></span></button>`:`<button class="mv sel" data-a="happ:${c.id}"><span class="mvi">📞</span><span class="mvt"><b>Approach</b><span>${c.club?'Talk to him, compensation goes to his club':'Free agent: no compensation'} · raises leak risk</span></span></button>`}
+  <button class="mv" data-a="hstar:${c.id}"><span class="mvi">${CI.mark}</span><span class="mvt"><b>${on?'Remove from shortlist':'Add to shortlist'}</b><span>Track this manager</span></span></button>
+  <button class="mv" data-a="cfull:${c.id}"><span class="mvi">📄</span><span class="mvt"><b>Full profile</b><span>Skills, playing past and coaching career</span></span></button>
+  <button class="btn wide" data-a="csheet:${c.id}">Cancel</button>`)}
+Object.assign(A,{cact:id=>coachActions(+id),cfull:id=>coachFull(+id),csheet:id=>coachSheet(+id),hire:id=>coachSheet(+id)});
+const _hs=A.hstar;A.hstar=id=>{const open=$('#modal').classList.contains('on');_hs(id);if(open)coachActions(+id)};
