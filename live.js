@@ -108,7 +108,8 @@ function draw(cv){const dpr=window.devicePixelRatio||1;const W=cv.clientWidth,H=
   const r=Math.max(8,Math.min(13,w/28));g.textAlign='center';g.textBaseline='middle';
   for(const q of LM.players){if(q.off&&!q.leaving)continue;const x=X(q.x),y=Y(q.y);g.globalAlpha=q.leaving?.6:1;g.fillStyle='rgba(0,0,0,.28)';g.beginPath();g.ellipse(x+1,y+r*.85,r*.9,r*.33,0,0,7);g.fill();
     if(q.glow>0){g.strokeStyle=q.gcol||'#ffe35a';g.lineWidth=3;g.globalAlpha=.5+.5*Math.sin(LM.t*12);g.beginPath();g.arc(x,y,r+5,0,7);g.stroke();g.globalAlpha=1}
-    g.fillStyle=q.p.pos==='GK'?(q.s===0?'#e8b04a':'#8f5ad6'):q.col;g.beginPath();g.arc(x,y,r,0,7);g.fill();g.strokeStyle=q===LM.carrier?'#ffe35a':'#fff';g.lineWidth=q===LM.carrier?3:1.8;g.stroke();
+    if(typeof drawAura==='function')drawAura(g,q,x,y,r);
+    g.fillStyle=q.slow>0?'#8e5be8':q.p.pos==='GK'?(q.s===0?'#e8b04a':'#8f5ad6'):q.col;if(q.slow>0)q.slow--;g.beginPath();g.arc(x,y,r,0,7);g.fill();g.strokeStyle=q===LM.carrier?'#ffe35a':'#fff';g.lineWidth=q===LM.carrier?3:1.8;g.stroke();
     g.fillStyle='#fff';g.font=`800 ${r*1.05}px "Big Shoulders Display",Impact,sans-serif`;g.fillText(q.num,x,y+1);
     if(q.card){g.fillStyle=q.card==='Y'?'#f2c300':'#d62020';g.fillRect(x+r*.55,y-r*1.25,r*.5,r*.7);g.strokeStyle='#111';g.lineWidth=.8;g.strokeRect(x+r*.55,y-r*1.25,r*.5,r*.7)}g.globalAlpha=1}
   const b=LM.ball;const bx=X(b.x),by=Y(b.y);const lift=b.h*h*1.4;g.fillStyle='rgba(0,0,0,.35)';g.beginPath();g.ellipse(bx+1,by+2,r*.42,r*.2,0,0,7);g.fill();const br=r*.42*(1+b.h*3);g.fillStyle='#fff';g.beginPath();g.arc(bx,by-lift,br,0,7);g.fill();g.strokeStyle='#111';g.lineWidth=1.1;g.stroke();g.fillStyle='#111';g.beginPath();g.arc(bx,by-lift,br*.35,0,7);g.fill();
