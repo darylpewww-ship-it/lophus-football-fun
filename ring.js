@@ -44,3 +44,15 @@ function drawAura(g,q,x,y,r){const t=bestRing(q.p);if(t>8)return;const T=LM.t||0
   g.restore();
   if(t<=2&&q.s!=null)for(const o of LM.players){if(o.s===q.s||o.off)continue;const dx=o.x-q.x,dy=o.y-q.y;if(dx*dx+dy*dy<(t===0?.018:t===1?.009:.004))o.slow=6}}
 if(typeof TMP!=='undefined'&&TMP&&!TMP.potv&&(!S||!S.me)){TMP=null;startScreen()}
+
+/* ---------- a higher skill ring means a higher ceiling ---------- */
+// floor for potential by best ring, relative to the club's tier: A near the top of the usual range, SSS at the tier cap, Z/ZZ/ZZZ beyond it
+const RING_FLOOR=[c=>c.pot.hard+12,c=>c.pot.hard+7,c=>c.pot.hard+3,c=>c.pot.hard,c=>c.pot.soft,c=>c.pot.soft-3,c=>c.pot.soft-6,c=>c.pot.min+2,null];
+function ringPot(p){const t=bestRing(p);if(t>8||!RING_FLOOR[t]||!p.cap)return;const c=TIER_CONFIG[lgTier(S.clubs[p.club]?.lg??3)];const want=Math.min(97,RING_FLOOR[t](c));if(p.pot>=want)return;
+  for(let i=0;i<8&&calcOvr(p,p.cap)<want;i++){const d=want-calcOvr(p,p.cap);ATT.forEach(k=>p.cap[k]=cl(p.cap[k]+Math.ceil(d),p[k],99))}p.pot=Math.max(p.ovr,calcOvr(p,p.cap));p.ringp=t;setVal(p)}
+function ringPotAll(){for(const p of Object.values(S.P))if(p.tr&&p.tr.length)ringPot(p)}
+const _cw2=createWorld;createWorld=function(...a){const r=_cw2(...a);ringPotAll();return r};
+const _dm=dynMonthly;dynMonthly=function(){_dm();ringPotAll()};
+const _psR=playerSheet;playerSheet=function(id){const p=S.P[id];if(p)ringPot(p);return _psR(id)};
+const _ed3=ensureDyn;ensureDyn=function(){_ed3();if(!S.ringp){ringPotAll();S.ringp=1}};
+if(typeof TMP!=='undefined'&&TMP){const k=S;S=TMP;ringPotAll();S=k}
